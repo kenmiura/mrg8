@@ -3,6 +3,7 @@ c  National Institute of Informatics      K.Miura
 
 Copyright (C) 2006, Kenichi Miura,   All rights reserved. 
                          
+
 c  Redistribution and use in source and binary forms, with or without
 c  modification, are permitted provided that the following conditions
 c  are met:
