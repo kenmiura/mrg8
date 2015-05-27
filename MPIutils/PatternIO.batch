@@ -1,0 +1,10 @@
+#PBS -q regular
+#PBS -l mppwidth=128
+#PBS -l walltime=04:00:00
+#PBS -j eo
+
+cd $PBS_O_WORKDIR
+aprun -n 128 ./PatternIO
+aprun -n 80 ./PatternIO
+aprun -n 64 ./PatternIO
+aprun -n 40 ./PatternIO
