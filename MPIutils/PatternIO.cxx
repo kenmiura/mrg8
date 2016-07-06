@@ -71,6 +71,14 @@ and all of the testing will use the MPI-IO library with collective calls.  The b
 will still write the same strided pattern to disk, but just use a different API to do so.
 
 extended by: PatternPOSIX, PatternMPIIO
+ 
+ 
+ Next?:
+	Create autoconfig script to include subclasses that can be built and exclude those that cannot
+	Auto-discover MPI and HDF5 implementations if available (exclude if not)
+	Create parameter parser for different options.
+ 
+ 
 ************************/
 // base class for all of the IO tests
 struct PatternIO { 
