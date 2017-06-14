@@ -3,9 +3,11 @@
  *
  *  Created on: Apr 6, 2015
  *      Author: aghasemi
+ *  Updated on: June 14, 2017
+ *      Author: Nagasaka
  */
 
-#include "mrg8_jv.h"
+#include "mrg8_vec.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -24,16 +26,15 @@ using namespace std;
 #define AVX512
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-mrg8::mrg8(): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(
-			1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(
-			1927846343), iseed(0), JUMP_MATRIX(8 * 8 * 247) {
+mrg8::mrg8(): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(1927846343), iseed(0), JUMP_MATRIX(8 * 8 * 247), isJumpMatrix(false)
+{
 	mcg64ni();
 	read_jump_matrix();
 }
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-mrg8::mrg8(const uint32_t seed_val): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(
-		1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(
-		1927846343), iseed(seed_val), JUMP_MATRIX(8 * 8 * 247){
+mrg8::mrg8(const uint32_t seed_val): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(1927846343), iseed(seed_val), JUMP_MATRIX(8 * 8 * 247), isJumpMatrix(false)
+{
 	mcg64ni();
 	read_jump_matrix();
 }
@@ -49,14 +50,18 @@ mrg8::mrg8(const uint32_t seed_val): MAX_RND(2147483646), MASK(2147483647), COEF
 // (s1 + s2) mod (2^31 -1) = (s1 mod (2^31-1) + s2 mod (2^31-1)) mod (2^31-1)
 // s1 = (s1 & mask) + 2^31 * (s1 >> 31) --> s1 mod (2^31-1) = (s1 & mask) + (s1 >> 31)
 // s2 = (s2 & mask) + 2^31 * (s2 >> 31) --> s2 mod (2^31-1) = (s2 & mask) + (s2 >> 31)
-uint32_t mrg8::bigDotProd(const uint32_t x[8], const uint32_t y[8]) const {
+uint32_t mrg8::bigDotProd(const uint32_t x[8], const uint32_t y[8]) const
+{
 	uint64_t s, s1, s2;
-	s1 = 0;s2 = 0;s = 0;
+	s1 = 0;
+    s2 = 0;
+    s = 0;
 	for (int q = 0; q < 4; ++q) {
 		s1 += uint64_t(x[q]) * y[q];
 		s2 += uint64_t(x[4 + q]) * y[4 + q];
 	}
 	s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + ( s2 >> 31);
+    // s = ((s & MASK) + (s >> 31));
 	return ((s & MASK) + (s >> 31));
 }
 
@@ -64,61 +69,61 @@ uint32_t mrg8::bigDotProd(const uint32_t x[8], const uint32_t y[8]) const {
 // reading pre-calculated jump matrix from file
 // A^(2^j) mod (2^31 - 1) for j = 0, 1, ..., 246 where A is the 8x8 one-step jump matrix
 // Each matrix is in column order, that is (A^(2^j))(r,c) = JUMP_MATRIX[j * 64 + r + 8*c]
-void mrg8::read_jump_matrix(){
+void mrg8::read_jump_matrix()
+{
+    if (isJumpMatrix) return;
+    
 	std::ifstream infile;
 	infile.open("jump_matrix.txt");
-	if(infile.fail()){
+	if (infile.fail()) {
 		std::cerr << "jump_matrix.txt could not be opened! Terminating!"<<std::endl;
 		exit(EXIT_FAILURE);
 	}
 
 	uint32_t t;
-	for(int k=0;k<8*8*247;++k){
+	for (int k = 0; k < 8 * 8 * 247; ++k) {
 		infile >> t;
 		JUMP_MATRIX[k] = t;
 	}
     infile.close();
+    isJumpMatrix = true;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Jumping the state ahead by a 200-bit value with the zero index as the LSB
-void mrg8::jump_ahead(const short jump_val_bin[200])
+void mrg8::jump_ahead(const short jump_val_bin[200], uint32_t *new_state)
 {
-	uint32_t jump_mat[8][8], new_state[8], rowVec[8];
+	uint32_t jump_mat[8][8], rowVec[8];
 
 	//calculating the jump matrix
 	jump_calc(jump_val_bin, jump_mat);
 
 	// Multiply the current state by jump_mat
-	for (int r = 0; r < 8; ++r){
-		for (int c = 0;c<8;++c){
+	for (int r = 0; r < 8; ++r) {
+		for (int c = 0; c < 8; ++c) {
 			rowVec[c] = jump_mat[r][c];
 		}
 		new_state[r] = bigDotProd(rowVec, state);
 	}
-
-	for(int i=0;i<8;++i)
-		state[i] = new_state[i];
-
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Jumping the state ahead by a jum_val
-void mrg8::jump_ahead(const uint64_t jump_val)
+void mrg8::jump_ahead(const uint64_t jump_val, uint32_t *new_state)
 {
      short jump_val_bin[200];
      dec2bin(jump_val, jump_val_bin);
-     jump_ahead(jump_val_bin);
+     jump_ahead(jump_val_bin, new_state);
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 void mrg8::dec2bin(const uint64_t jval, short jump_val_bin[200]) const
 {
-	for (int nb = 0;nb < 200;++nb) {
+	for (int nb = 0; nb < 200; ++nb) {
 		jump_val_bin[nb] = 0;
 	}
 
-	for (int nb = 0; nb < 64; ++nb){
+	for (int nb = 0; nb < 64; ++nb) {
 		if (jval & (1ul << nb))
 			jump_val_bin[nb] = 1;
 	}
@@ -142,11 +147,11 @@ void mrg8::jump_calc(const short jump_val_bin[200], uint32_t jump_mat[8][8])
 
 	for (int nb = 0; nb < 200; ++nb) {
 		if (jump_val_bin[nb]) {
-			for (int r = 0; r < 8; ++r){
-				for (int c = 0; c < 8; ++c){
+			for (int r = 0; r < 8; ++r) {
+				for (int c = 0; c < 8; ++c) {
 					for (int q = 0; q < 8; ++q) {
 						vec1[q] = jump_mat[r][q];
-						vec2[q] = JUMP_MATRIX[64*nb + q + 8*c];
+						vec2[q] = JUMP_MATRIX[64 * nb + q + 8 * c];
 					}
 					tmp_mat[r][c] = bigDotProd(vec1, vec2);
 				}
@@ -172,7 +177,7 @@ void mrg8::mcg64ni()
 		iseed = 97531;
 
 	x = iseed;
-	for(int k=0;k<8;++k){
+	for (int k = 0; k < 8; ++k) {
 		x = ia * x;
 		tmp = (x >> 32);
 		state[k] = (tmp>>1);
@@ -182,7 +187,7 @@ void mrg8::mcg64ni()
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Generate integer uniform RVs in [0, 2^31 -1)
-void mrg8::randint(uint32_t * iran, int n)
+void mrg8::randint(uint32_t * iran, int n, uint32_t *new_state)
 {
 	uint32_t a[8], z;
 	a[0] = COEFF0;
@@ -195,34 +200,69 @@ void mrg8::randint(uint32_t * iran, int n)
 	a[7] = COEFF7;
 
     for (int k = 0; k < n; ++k) {
-        z = bigDotProd(a, state);
+        z = bigDotProd(a, new_state);
         
-        state[7] = state[6];// S[n-8] = S[n-7]
-        state[6] = state[5];// S[n-7] = S[n-6]
-        state[5] = state[4];// S[n-6] = S[n-5]
-        state[4] = state[3];// S[n-5] = S[n-4]
-        state[3] = state[2];// S[n-4] = S[n-3]
-        state[2] = state[1];// S[n-3] = S[n-2]
-        state[1] = state[0];// S[n-2] = S[n-1]
-        state[0] = z;
-        iran[k] = state[0];// y[n] = S[n]
+        new_state[7] = new_state[6];// S[n-8] = S[n-7]
+        new_state[6] = new_state[5];// S[n-7] = S[n-6]
+        new_state[5] = new_state[4];// S[n-6] = S[n-5]
+        new_state[4] = new_state[3];// S[n-5] = S[n-4]
+        new_state[3] = new_state[2];// S[n-4] = S[n-3]
+        new_state[2] = new_state[1];// S[n-3] = S[n-2]
+        new_state[1] = new_state[0];// S[n-2] = S[n-1]
+        new_state[0] = z;
+        iran[k] = new_state[0];// y[n] = S[n]
 	}
+}
+
+void mrg8::randint(uint32_t * iran, int n)
+{
+    uint32_t *new_state = new uint32_t[8];
+    for (int i = 0; i < 8; ++i) {
+        new_state[i] = state[i];
+    }
+    randint(iran, n, new_state);
+    delete[] new_state;
+}
+
+uint32_t mrg8::randint()
+{
+	uint32_t r[1];
+	randint(r, 1);
+	return r[0];
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Generate uniform RVs in [0, 1)
-void mrg8::rand(double * fran, int n){
+void mrg8::rand(double * fran, int n, uint32_t *new_state)
+{
 	uint32_t * iran1 = new uint32_t[n];
 	double rnorm = 1.0/static_cast<double>(MASK);
-	randint(iran1, n);
-	for(int i=0;i<n;++i){
+	randint(iran1, n, new_state);
+	for (int i = 0; i < n; ++i) {
 	   fran[i] = static_cast<double>(iran1[i]) * rnorm;
 	}
 	delete [] iran1;
 }
 
+void mrg8::rand(double * ran, int n)
+{
+    uint32_t *new_state = new uint32_t[8];
+    for (int i = 0; i < 8; ++i) {
+        new_state[i] = state[i];
+    }
+    rand(ran, n, new_state);
+    delete[] new_state;
+}
+
+double mrg8::rand()
+{
+	double r[1];
+	rand(r, 1);
+	return r[0];
+}
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-void mrg8::mrg8dnz2(double * ran, int n)
+void mrg8::mrg8dnz2(double * ran, int n, uint32_t *new_state)
 {
     int i, j, k;
     double rnorm = 1.0 / static_cast<double>(MASK);
@@ -242,7 +282,7 @@ void mrg8::mrg8dnz2(double * ran, int n)
 	a[7] = COEFF7;
 
     for (k = 0; k < 8; ++k) {
-        x[k] = state[k];
+        x[k] = new_state[k];
         x[kmax + k] = x[k];
     }
     
@@ -283,7 +323,19 @@ void mrg8::mrg8dnz2(double * ran, int n)
     }
 }
 
-void mrg8::mrg8dnzj_inner(double * ran, int n)
+void mrg8::mrg8dnz2(double * ran, int n)
+{
+    uint32_t *new_state = new uint32_t[8];
+    for (int i = 0; i < 8; ++i) {
+        new_state[i] = state[i];
+    }
+    mrg8dnz2(ran, n, new_state);
+    delete[] new_state;
+
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+void mrg8::mrg8dnz_inner(double * ran, int n, uint32_t *each_state)
 {
 #ifdef AVX512
     int i, j, k;
@@ -302,7 +354,7 @@ void mrg8::mrg8dnzj_inner(double * ran, int n)
         }
     }
     for (i = 0; i < 8; ++i) {
-        r_state[i] = (uint64_t)(state[7 - i]);
+        r_state[i] = (uint64_t)(each_state[7 - i]);
     }
 
     state1_m = _mm512_load_epi64(r_state);
@@ -387,7 +439,18 @@ void mrg8::mrg8dnzj_inner(double * ran, int n)
 #endif
 }
 
-void mrg8::mrg8dnzj_outer(double * ran, int n)
+void mrg8::mrg8dnz_inner(double * ran, int n)
+{
+    uint32_t *new_state = new uint32_t[8];
+    for (int i = 0; i < 8; ++i) {
+        new_state[i] = state[i];
+    }
+    mrg8dnz_inner(ran, n, new_state);
+    delete[] new_state;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
 {
 #ifdef AVX512
     int i, j;
@@ -403,7 +466,7 @@ void mrg8::mrg8dnzj_outer(double * ran, int n)
         a8[i] = (uint64_t)(JUMP_MATRIX[8 * 8 * 4 - 1 - i]);
     }
     for (i = 0; i < 8; ++i) {
-        r_state[i] = state[7 - i];
+        r_state[i] = each_state[7 - i];
     }
 
     mask_m = _mm512_set1_epi64(MASK);
@@ -482,190 +545,88 @@ void mrg8::mrg8dnzj_outer(double * ran, int n)
 #endif
 }
     
-void mrg8::mrg8dnzj_threadparallel(double * ran, int n)
+void mrg8::mrg8dnz_outer(double * ran, int n)
 {
-    
+    uint32_t *new_state = new uint32_t[8];
+    for (int i = 0; i < 8; ++i) {
+        new_state[i] = state[i];
+    }
+    mrg8dnz_outer(ran, n, new_state);
+    delete[] new_state;
 }
-
+    
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-int main(int argc, char **argv)
+void mrg8::rand_tp(double * ran, int n)
 {
-    int i, N, NN;
-    double *ran1, *ran2, *ran3, *ran4;
-    double ave, var;
-    struct timeval start, end;
-    double msec1, msec2, mrng;
-    uint32_t iseed;
-    
-    // NN = 1 * 1000 * 1000;
-    NN = 256 * 1024 * 1024;
-    N = NN / 2;
-    ran1 = new double[NN];
-    ran2 = new double[NN];
-    ran3 = new double[NN];
-    ran4 = new double[NN];
-    
-    iseed = 13579;
-    
-    /* Measurement of mrg8 routine*/
-    mrg8 m1(iseed);
+    read_jump_matrix();
 
-    m1.seed_init(iseed);
-    m1.rand(ran1, 100);
+    int tnum = omp_get_max_threads();
+    int each_n = n / tnum;
 
-    m1.seed_init(iseed);
-    gettimeofday(&start, NULL);
-    m1.rand(ran1, N);
-    gettimeofday(&end, NULL);
-    msec1 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-
-    m1.seed_init(iseed);
-    gettimeofday(&start, NULL);
-    m1.rand(ran1, NN);
-    gettimeofday(&end, NULL);
-    msec2 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-    
-    mrng = (double)(NN - N) / (msec2 - msec1) / 1000;
-    cout << N << " of DP RNG by MRG8: " << msec1 << endl;
-    cout << NN << " of DP RNG by MRG8: " << msec2 << endl;
-    cout << "MRG8 DP RNG per second: " << mrng << " * 10^6" << endl;
-
-    /**/
-    ave = 0.0;
-    for (i = 0; i < NN; i++) {
-        ave += ran1[i];
+#pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int start = each_n * tid;
+        uint32_t *each_state = new uint32_t[8];
+        jump_ahead(start, each_state);
+        rand(ran + start, each_n, each_state);
+        delete[] each_state;
     }
-    ave /= (double)NN;
-    var = 0.0;
-    for (i = 0; i < NN; i++) {
-        var += (ran1[i] - ave) * (ran1[i] - ave);
-    }
-    var /= (double)NN;
-    
-    cout << "Arithmetic mean: " << ave << endl;
-    cout << "Standard deviation: " << sqrt(var) << endl << endl;
-
-    /* Measurement of mrg8dnz2 routine*/
-    mrg8 m2(iseed);
-    m2.mrg8dnz2(ran2, 100);
-
-    gettimeofday(&start, NULL);
-    m2.mrg8dnz2(ran2, N);
-    gettimeofday(&end, NULL);
-    msec1 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-
-    gettimeofday(&start, NULL);
-    m2.mrg8dnz2(ran2, NN);
-    gettimeofday(&end, NULL);
-    msec2 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-    
-    mrng = (double)(NN - N) / (msec2 - msec1) / 1000;
-    cout << N << " of DP RNG by MRG8DNZ2: " << msec1 << endl;
-    cout << NN << " of DP RNG by MRG8DNZ2: " << msec2 << endl;
-    cout << "MRG8DNZ2 DP RNG per second: " << mrng << " * 10^6" << endl;
-
-    /**/
-    ave = 0.0;
-    for (i = 0; i < NN; i++) {
-        ave += ran2[i];
-    }
-    ave /= (double)NN;
-    var = 0.0;
-    for (i = 0; i < NN; i++) {
-        var += (ran2[i] - ave) * (ran2[i] - ave);
-    }
-    var /= (double)NN;
-    
-    cout << "Arithmetic mean: " << ave << endl;
-    cout << "Standard deviation: " << sqrt(var) << endl << endl;
-
-    /* Measurement of mrg8dnzj routine*/
-    mrg8 m3(iseed);
-
-    m3.mrg8dnzj_inner(ran3, 100);
-
-    m3.seed_init(iseed);
-    gettimeofday(&start, NULL);
-    m3.mrg8dnzj_inner(ran3, N);
-    gettimeofday(&end, NULL);
-    msec1 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-
-    gettimeofday(&start, NULL);
-    m3.mrg8dnzj_inner(ran3, NN);
-    gettimeofday(&end, NULL);
-    msec2 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-    
-    mrng = (double)(NN - N) / (msec2 - msec1) / 1000;
-    cout << N << " of DP RNG by MRG8DNZJ: " << msec1 << endl;
-    cout << NN << " of DP RNG by MRG8DNZJ: " << msec2 << endl;
-    cout << "MRG8DNZJ_INNER DP RNG per second: " << mrng << " * 10^6" << endl;
-
-    /**/
-    ave = 0.0;
-    for (i = 0; i < NN; i++) {
-        ave += ran3[i];
-    }
-    ave /= (double)NN;
-    var = 0.0;
-    for (i = 0; i < NN; i++) {
-        var += (ran3[i] - ave) * (ran3[i] - ave);
-    }
-    var /= (double)NN;
-    
-    cout << "Arithmetic mean: " << ave << endl;
-    cout << "Standard deviation: " << sqrt(var) << endl << endl;
-
-    mrg8 m4(iseed);
-
-    m4.mrg8dnzj_outer(ran4, 100);
-
-    m4.seed_init(iseed);
-    gettimeofday(&start, NULL);
-    m4.mrg8dnzj_outer(ran4, N);
-    gettimeofday(&end, NULL);
-    msec1 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-
-    gettimeofday(&start, NULL);
-    m4.mrg8dnzj_outer(ran4, NN);
-    gettimeofday(&end, NULL);
-    msec2 = (double)(end.tv_sec - start.tv_sec) * 1000 + (double)(end.tv_usec - start.tv_usec) / 1000;
-    
-    mrng = (double)(NN - N) / (msec2 - msec1) / 1000;
-    cout << N << " of DP RNG by MRG8DNZJ: " << msec1 << endl;
-    cout << NN << " of DP RNG by MRG8DNZJ: " << msec2 << endl;
-    cout << "MRG8DNZJ_OUTER DP RNG per second: " << mrng << " * 10^6" << endl;
-
-    /**/
-    ave = 0.0;
-    for (i = 0; i < NN; i++) {
-        ave += ran4[i];
-    }
-    ave /= (double)NN;
-    var = 0.0;
-    for (i = 0; i < NN; i++) {
-        var += (ran4[i] - ave) * (ran4[i] - ave);
-    }
-    var /= (double)NN;
-    
-    cout << "Arithmetic mean: " << ave << endl;
-    cout << "Standard deviation: " << sqrt(var) << endl << endl;
-
-    /* Print first ten numbers for check */
-    cout << "First ten numbers" << endl;
-    for (i = 0; i < 10; ++i) {
-        cout << i << ": " << ran1[i] << ", " << ran2[i] << ", " << ran3[i] << ", " << ran4[i] << endl;
-    }
-
-    delete[] ran1;
-    delete[] ran2;
-    delete[] ran3;
-    delete[] ran4;
-
-    return 0;
 }
 
+void mrg8::mrg8dnz2_tp(double * ran, int n)
+{
+    read_jump_matrix();
 
+    int tnum = omp_get_max_threads();
+    int each_n = n / tnum;
 
+#pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int start = each_n * tid;
+        uint32_t *each_state = new uint32_t[8];
+        jump_ahead(start, each_state);
+        mrg8dnz2(ran + start, each_n, each_state);
+        delete[] each_state;
+    }
+}
+
+void mrg8::mrg8dnz_inner_tp(double * ran, int n)
+{
+    read_jump_matrix();
+
+    int tnum = omp_get_max_threads();
+    int each_n = n / tnum;
+
+#pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int start = each_n * tid;
+        uint32_t *each_state = new uint32_t[8];
+        jump_ahead(start, each_state);
+        mrg8dnz_inner(ran + start, each_n, each_state);
+        delete[] each_state;
+    }
+}
+
+void mrg8::mrg8dnz_outer_tp(double * ran, int n)
+{
+    read_jump_matrix();
+
+    int tnum = omp_get_max_threads();
+    int each_n = n / tnum;
+
+#pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int start = each_n * tid;
+        uint32_t *each_state = new uint32_t[8];
+        jump_ahead(start, each_state);
+        mrg8dnz_outer(ran + start, each_n, each_state);
+        delete[] each_state;
+    }
+}
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 void mrg8::set_state(const uint32_t st[8]){
@@ -704,17 +665,4 @@ void mrg8::print_matrix(const uint32_t jm[8][8]) const{
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-uint32_t mrg8::randint(){
-	uint32_t r[1];
-	randint(r, 1);
-	return r[0];
-}
-
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-double mrg8::rand(){
-	double r[1];
-	rand(r, 1);
-	return r[0];
-}
-
-
