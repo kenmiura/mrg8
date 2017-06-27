@@ -307,8 +307,12 @@ void mrg8::mrg8dnz2(double * ran, int n, uint32_t *new_state)
 
     if (nn > 0) {
         for (i = 0; i < nn; ++i) {
-            s1 = a[0] * x[0] + a[1] * x[1] + a[2] * x[2] + a[3] * x[3];
-            s2 = a[4] * x[4] + a[5] * x[5] + a[6] * x[6] + a[7] * x[7];
+            s1 = 0;
+            s2 = 0;
+            for (j = 0; j < 4; ++j) {
+                s1 += uint64_t(a[j]) * x[j];
+                s2 += uint64_t(a[j + 4]) * x[j + 4];
+            }
             s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
             x[7] = x[6];
             x[6] = x[5];
@@ -348,6 +352,7 @@ void mrg8::mrg8dnz_inner(double * ran, int n, uint32_t *each_state)
     uint64_t s;
     
     read_jump_matrix();
+    
     for (i = 0; i < 8; ++i) {
         for (j = 0; j < 8; ++j) {
             a8[(7 - i) * 8 + (7 - j)] = (uint64_t)(JUMP_MATRIX[8 * 8 * 3 + i + j * 8]);
@@ -361,7 +366,7 @@ void mrg8::mrg8dnz_inner(double * ran, int n, uint32_t *each_state)
     mask_m = _mm512_set1_epi64(MASK);
     rnorm_m = _mm512_set1_pd(rnorm);
 
-    for (i = 0; i < n; i+=8) {
+    for (i = 0; i < n - 8; i+=8) {
         if (((i >> 3) & 1) == 0) {
             for (k = 0; k < 8; ++k) {
                 a_m = _mm512_load_epi64(a8 + k * 8);
@@ -405,6 +410,55 @@ void mrg8::mrg8dnz_inner(double * ran, int n, uint32_t *each_state)
             _mm512_store_pd(ran + i, ran_m);
         }
     }
+    
+    if (((i >> 3) & 1) == 0) {
+        for (k = 0; k < 8; ++k) {
+            a_m = _mm512_load_epi64(a8 + k * 8);
+            s1_m = _mm512_mul_epu32(a_m, state1_m);
+            s_m = _mm512_and_epi64(s1_m, mask_m);
+            s2_m = _mm512_srli_epi64(s1_m, 31);
+            s_m = _mm512_add_epi64(s_m, s2_m);
+
+            s = _mm512_reduce_add_epi64(s_m);
+            state2_m[k] = s;
+        }
+        s_m = _mm512_and_epi64(state2_m, mask_m);
+        state2_m = _mm512_srli_epi64(state2_m, 31);
+        state2_m = _mm512_add_epi64(s_m, state2_m);
+            
+        s_32m = _mm256_set_epi32((int)state2_m[7], (int)state2_m[6], (int)state2_m[5], (int)state2_m[4], (int)state2_m[3], (int)state2_m[2], (int)state2_m[1], (int)state2_m[0]);
+            
+        ran_m = _mm512_cvtepi32_pd(s_32m);
+        ran_m = _mm512_mul_pd(ran_m, rnorm_m);
+        for (k = 0; k < n - i; ++k) {
+            ran[i + k] = ran_m[k];
+        }
+    }
+    else {
+        for (k = 0; k < 8; ++k) {
+            a_m = _mm512_load_epi64(a8 + k * 8);
+            s1_m = _mm512_mul_epu32(a_m, state2_m);
+            s_m = _mm512_and_epi64(s1_m, mask_m);
+            s2_m = _mm512_srli_epi64(s1_m, 31);
+            s_m = _mm512_add_epi64(s_m, s2_m);
+
+            s = _mm512_reduce_add_epi64(s_m);
+            state1_m[k] = s;
+        }
+        s_m = _mm512_and_epi64(state1_m, mask_m);
+        state1_m = _mm512_srli_epi64(state1_m, 31);
+        state1_m = _mm512_add_epi64(s_m, state1_m);
+
+        s_32m = _mm256_set_epi32((int)state1_m[7], (int)state1_m[6], (int)state1_m[5], (int)state1_m[4], (int)state1_m[3], (int)state1_m[2], (int)state1_m[1], (int)state1_m[0]);
+            
+        ran_m = _mm512_cvtepi32_pd(s_32m);
+        ran_m = _mm512_mul_pd(ran_m, rnorm_m);
+        for (k = 0; k < n - i; ++k) {
+            ran[i + k] = ran_m[k];
+        }
+        // _mm512_mask_store_pd(ran + i, (1 << (n - i - 1)), ran_m);
+    }
+
 #else
     int i, j, k;
     uint32_t a8[64];
@@ -419,12 +473,12 @@ void mrg8::mrg8dnz_inner(double * ran, int n, uint32_t *each_state)
         }
     }
     for (i = 0; i < 8; ++i) {
-        r_state[0][i] = state[7 - i];
+        r_state[0][i] = each_state[7 - i];
     }
     
     for (i = 0; i < n; i+=8) {
         target = (i >> 3) & 1;
-        for (k = 0; k < 8; ++k) {
+        for (k = 0; k < 8 && i + k < n; ++k) {
             s1 = 0;
             s2 = 0;
             for (j = 0; j < 4; ++j) {
@@ -472,7 +526,7 @@ void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
     mask_m = _mm512_set1_epi64(MASK);
     rnorm_m = _mm512_set1_pd(rnorm);
 
-    for (i = 0; i < n; i+=8) {
+    for (i = 0; i < n - 8; i+=8) {
         s1_m = _mm512_set1_epi64(0);
         s2_m = _mm512_set1_epi64(0);
 
@@ -509,8 +563,50 @@ void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
         ran_m = _mm512_cvtepi32_pd(state_32m);
         ran_m = _mm512_mul_pd(ran_m, rnorm_m);
         _mm512_store_pd(ran + i, ran_m);
-
     }
+
+    /* Fraction */
+    s1_m = _mm512_set1_epi64(0);
+    s2_m = _mm512_set1_epi64(0);
+
+    for (j = 0; j < 4; ++j) {
+        state_m = _mm512_set1_epi64((uint64_t)(r_state[j]));
+        a_m = _mm512_load_epi64(a8 + j * 8);
+        state_m = _mm512_mul_epu32(a_m, state_m);
+        s1_m = _mm512_add_epi64(s1_m, state_m);
+
+        state_m = _mm512_set1_epi64((uint64_t)(r_state[j + 4]));
+        a_m = _mm512_load_epi64(a8 + (j + 4) * 8);
+        state_m = _mm512_mul_epu32(a_m, state_m);
+        s2_m = _mm512_add_epi64(s2_m, state_m);
+    }
+
+    s_m = _mm512_and_epi64(s1_m, mask_m);
+    s1_m = _mm512_srli_epi64(s1_m, 31);
+    s1_m = _mm512_add_epi64(s_m, s1_m);
+
+    s_m = _mm512_and_epi64(s2_m, mask_m);
+    s2_m = _mm512_srli_epi64(s2_m, 31);
+    s2_m = _mm512_add_epi64(s_m, s2_m);
+
+    s_m = _mm512_add_epi64(s1_m, s2_m);
+            
+    state_m = _mm512_and_epi64(s_m, mask_m);
+    s_m = _mm512_srli_epi64(s_m, 31);
+    state_m = _mm512_add_epi64(s_m, state_m);
+
+    _mm512_store_epi64(r_state, state_m);
+
+    state_32m = _mm256_set_epi32((int)state_m[7], (int)state_m[6], (int)state_m[5], (int)state_m[4], (int)state_m[3], (int)state_m[2], (int)state_m[1], (int)state_m[0]);
+
+    ran_m = _mm512_cvtepi32_pd(state_32m);
+    ran_m = _mm512_mul_pd(ran_m, rnorm_m);
+    for (j = 0; j < n - i; ++j) {
+        ran[i + j] = ran_m[j];
+    }
+    // _mm512_mask_store_pd(ran + i, (1 << (n - i - 1)), ran_m);
+
+
 #else
     uint32_t a8[64];
     uint32_t r_state[8];
@@ -522,7 +618,7 @@ void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
         a8[i] = JUMP_MATRIX[8 * 8 * 4 - 1 - i];
     }
     for (int i = 0; i < 8; ++i) {
-        r_state[i] = state[7 - i];
+        r_state[i] = each_state[7 - i];
     }
 
     for (int i = 0; i < n; i+=8) {
@@ -536,7 +632,7 @@ void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
                 s2[k] += (uint64_t)(a8[(j + 4) * 8 + k]) * r_state[j + 4];
             }
         }
-        for (int k = 0; k < 8; ++k) { //only unroll not vectorized
+        for (int k = 0; k < 8 && i + k < n; ++k) { //only unroll not vectorized
             s[k] = (s1[k] & MASK) + (s1[k] >> 31) + (s2[k] & MASK) + (s2[k] >> 31);
             r_state[k] = (s[k] & MASK) + (s[k] >> 31);
             ran[i + k] = static_cast<double>(r_state[k]) * rnorm;
@@ -558,16 +654,17 @@ void mrg8::mrg8dnz_outer(double * ran, int n)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 void mrg8::rand_tp(double * ran, int n)
 {
-    read_jump_matrix();
-
     int tnum = omp_get_max_threads();
-    int each_n = n / tnum;
 
 #pragma omp parallel
     {
+        int each_n = n / tnum;
         int tid = omp_get_thread_num();
         int start = each_n * tid;
         uint32_t *each_state = new uint32_t[8];
+        if (tid == (tnum - 1)) {
+            each_n = n - each_n * tid;
+        }
         jump_ahead(start, each_state);
         rand(ran + start, each_n, each_state);
         delete[] each_state;
@@ -576,16 +673,17 @@ void mrg8::rand_tp(double * ran, int n)
 
 void mrg8::mrg8dnz2_tp(double * ran, int n)
 {
-    read_jump_matrix();
-
     int tnum = omp_get_max_threads();
-    int each_n = n / tnum;
 
 #pragma omp parallel
     {
+        int each_n = n / tnum;
         int tid = omp_get_thread_num();
         int start = each_n * tid;
         uint32_t *each_state = new uint32_t[8];
+        if (tid == (tnum - 1)) {
+            each_n = n - each_n * tid;
+        }
         jump_ahead(start, each_state);
         mrg8dnz2(ran + start, each_n, each_state);
         delete[] each_state;
@@ -594,16 +692,17 @@ void mrg8::mrg8dnz2_tp(double * ran, int n)
 
 void mrg8::mrg8dnz_inner_tp(double * ran, int n)
 {
-    read_jump_matrix();
-
     int tnum = omp_get_max_threads();
-    int each_n = n / tnum;
 
 #pragma omp parallel
     {
+        int each_n = n / tnum;
         int tid = omp_get_thread_num();
         int start = each_n * tid;
         uint32_t *each_state = new uint32_t[8];
+        if (tid == (tnum - 1)) {
+            each_n = n - each_n * tid;
+        }
         jump_ahead(start, each_state);
         mrg8dnz_inner(ran + start, each_n, each_state);
         delete[] each_state;
@@ -612,16 +711,17 @@ void mrg8::mrg8dnz_inner_tp(double * ran, int n)
 
 void mrg8::mrg8dnz_outer_tp(double * ran, int n)
 {
-    read_jump_matrix();
-
     int tnum = omp_get_max_threads();
-    int each_n = n / tnum;
 
 #pragma omp parallel
     {
+        int each_n = n / tnum;
         int tid = omp_get_thread_num();
         int start = each_n * tid;
         uint32_t *each_state = new uint32_t[8];
+        if (tid == (tnum - 1)) {
+            each_n = n - each_n * tid;
+        }
         jump_ahead(start, each_state);
         mrg8dnz_outer(ran + start, each_n, each_state);
         delete[] each_state;

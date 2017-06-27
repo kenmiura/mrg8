@@ -17,7 +17,7 @@
 
 using namespace std;
 
-#define ITER 10
+#define ITER 5
 #define DEBUG
 
 void check_rand(double *ran, int N)
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
         N = atoi(argv[1]) * 1024 * 1024;
     }
     else {
-        N = 1 * 1024 * 1024;
+        N = 1 * 1000 * 1000;
     }
 
     /* Sequential Random Generator - ver1*/
@@ -80,6 +80,7 @@ int main(int argc, char **argv)
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_SEQ1, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
 
+#if 0
     /* Sequential Random Generator - ver2*/
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -125,6 +126,7 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_VEC_INNER, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
+#endif
 
     /* Vectorized Random Generator - outer */
     ave_msec = 0;
@@ -149,6 +151,7 @@ int main(int argc, char **argv)
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_VEC_OUTER, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
 
+#if 0
     /* Thread-Parallel Sequential Random Generator - ver1 */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -170,7 +173,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ1_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_SEQ1_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
 
     /* Thread-Parallel Sequential Random Generator - ver2 */
     ave_msec = 0;
@@ -193,7 +196,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ2_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_SEQ2_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
 
     /* Thread-Parallel and Vectorized Random Generator - inner */
     ave_msec = 0;
@@ -216,29 +219,33 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_INNER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_VEC_INNER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
 
+#endif
+    
     /* Thread-Parallel and Vectorized Random Generator - outer */
     ave_msec = 0;
+    ran = new double[N * ITER];
     for (i = 0; i < ITER; ++i) {
         mrg8 m(iseed);
-        ran = new double[N];
         start = omp_get_wtime();
-        m.mrg8dnz_outer_tp(ran, N);
+        m.mrg8dnz_outer_tp(ran + i * N, N);
         end = omp_get_wtime();
         msec = (end - start) * 1000;
+        cout << msec << endl;
 #ifdef DEBUG
         if (i == 0) {
             check_rand(ran, N);
         }
 #endif
-        delete[] ran;
         if (i > 0) {
             ave_msec += msec;
         }
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_OUTER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_VEC_OUTER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    delete[] ran;
+
 }
 
