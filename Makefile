@@ -1,6 +1,6 @@
 CC = icpc
 
-FLAGS = -O3 -g -fopenmp
+FLAGS = -O3 -g -fopenmp -axMIC-AVX512
 MKLROOT = /opt/intel/mkl
 MKLLIBS = -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_intel_thread.a -Wl,--end-group -liomp5 -lpthread -lm -ldl -lmkl_rt
 #-xMIC-AVX512 -qopt-report=5

@@ -17,7 +17,7 @@
 
 using namespace std;
 
-#define ITER 5
+#define ITER 10
 #define DEBUG
 
 void check_rand(double *ran, int N)
@@ -66,6 +66,7 @@ int main(int argc, char **argv)
         m.rand(ran, N);
         end = omp_get_wtime();
         msec = (end - start) * 1000;
+        cout << msec << endl;
 #ifdef DEBUG
         if (i == 0) {
             check_rand(ran, N);
@@ -126,6 +127,7 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_VEC_INNER, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
+
 #endif
 
     /* Vectorized Random Generator - outer */
@@ -142,6 +144,7 @@ int main(int argc, char **argv)
             check_rand(ran, N);
         }
 #endif
+        cout << msec << endl;
         delete[] ran;
         if (i > 0) {
             ave_msec += msec;
@@ -222,7 +225,6 @@ int main(int argc, char **argv)
     cout << "MRG8_VEC_INNER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
 
 #endif
-    
     /* Thread-Parallel and Vectorized Random Generator - outer */
     ave_msec = 0;
     ran = new double[N * ITER];

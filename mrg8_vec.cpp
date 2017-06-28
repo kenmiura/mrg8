@@ -508,8 +508,8 @@ void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
 {
 #ifdef AVX512
     int i, j;
-    uint64_t a8[64];
-    uint64_t r_state[8];
+    uint64_t *a8 = new uint64_t[64];
+    uint64_t *r_state = new uint64_t[8];
     __m256i state_32m;
     __m512i a_m, state_m, s_m, s1_m, s2_m, mask_m;
     __m512d ran_m, rnorm_m;
@@ -606,7 +606,8 @@ void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
     }
     // _mm512_mask_store_pd(ran + i, (1 << (n - i - 1)), ran_m);
 
-
+    delete[] a8;
+    delete[] r_state;
 #else
     uint32_t a8[64];
     uint32_t r_state[8];
@@ -641,7 +642,7 @@ void mrg8::mrg8dnz_outer(double * ran, int n, uint32_t *each_state)
 #endif
 }
     
-void mrg8::mrg8dnz_outer(double * ran, int n)
+void mrg8::mrg8dnz_outer(double * ran, const int n)
 {
     uint32_t *new_state = new uint32_t[8];
     for (int i = 0; i < 8; ++i) {
