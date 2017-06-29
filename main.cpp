@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 
     iseed = 13579;
     if (argc > 1) {
-        N = atoi(argv[1]) * 1024 * 1024;
+        N = atoi(argv[1]) * 1000 * 1000;
     }
     else {
         N = 1 * 1000 * 1000;
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ1, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_SEQ1, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Sequential Random Generator - ver2*/
     ave_msec = 0;
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ2, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_SEQ2, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Vectorized Random Generator - inner */
     ave_msec = 0;
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_INNER, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_VEC_INNER, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Vectorized Random Generator - outer */
     ave_msec = 0;
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_OUTER, " << "1, " << N << ", " << mrng << " * 10^6" << endl;
+    cout << "MRG8_VEC_OUTER, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* MKL RNG -accurate- */
     ave_msec = 0;
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_ACCURATE, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MKL_ACCURATE, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* MKL RNG -fast- */
     ave_msec = 0;
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_FAST, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MKL_FAST, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
     
     /* Thread-Parallel Sequential Random Generator - ver1 */
     ave_msec = 0;
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ1_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MRG8_SEQ1_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Thread-Parallel Sequential Random Generator - ver2 */
     ave_msec = 0;
@@ -258,7 +258,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ2_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MRG8_SEQ2_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Thread-Parallel and Vectorized Random Generator - inner */
     ave_msec = 0;
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_INNER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MRG8_VEC_INNER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Thread-Parallel and Vectorized Random Generator - outer */
     ave_msec = 0;
@@ -298,7 +298,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_OUTER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MRG8_VEC_OUTER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Thread-Parallel MKL RNG -accurate- */
     ave_msec = 0;
@@ -318,7 +318,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_ACCURATE_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MKL_ACCURATE_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
 
     /* Thread-Parallel MKL RNG -fast- */
     ave_msec = 0;
@@ -338,7 +338,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_FAST_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << msec << endl;
+    cout << "MKL_FAST_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
     
     delete[] ran;
 
