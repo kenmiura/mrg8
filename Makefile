@@ -17,4 +17,4 @@ mrg8 : $(OBJ)
 	$(CC) -c $(FLAGS) $(INCLUDE) -o $@ $<
 
 clean :
-	rm -f *.o mrg8 mkl_main
+	rm -f *.o mrg8
