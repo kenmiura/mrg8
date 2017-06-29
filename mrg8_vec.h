@@ -3,6 +3,8 @@
  *
  *  Created on: Apr 6, 2015
  *      Author: aghasemi
+ * Updated on: June 29, 2017
+ *      Author: Yusuke
  */
 
 #ifndef MRG8_H_
@@ -34,16 +36,16 @@ public:
     void mrg8dnz2(double *ran, int n, uint32_t *new_state);
     void mrg8dnz2(double *ran, int n);
 
-    void mrg8dnz_inner(double *ran, int n, uint32_t *each_state);
-    void mrg8dnz_inner(double *ran, int n);
+    void mrg8_vec_inner(double *ran, int n, uint32_t *each_state);
+    void mrg8_vec_inner(double *ran, int n);
 
-    void mrg8dnz_outer(double * ran, int n, uint32_t *each_state);
-    void mrg8dnz_outer(double * ran, int n);
+    void mrg8_vec_outer(double * ran, int n, uint32_t *each_state);
+    void mrg8_vec_outer(double * ran, int n);
 
 	void rand_tp(double *ran, int n);
     void mrg8dnz2_tp(double *ran, int n);
-    void mrg8dnz_inner_tp(double *ran, int n);
-    void mrg8dnz_outer_tp(double * ran, int n);
+    void mrg8_vec_inner_tp(double *ran, int n);
+    void mrg8_vec_outer_tp(double * ran, int n);
 
 	void seed_init(const uint32_t seed_val);
 	void get_state(uint32_t st[8]) const;
