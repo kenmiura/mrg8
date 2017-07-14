@@ -21,7 +21,7 @@
 using namespace std;
 
 #define ITER 10
-#define DEBUG
+// #define DEBUG
 
 void check_rand(double *ran, int N)
 {
@@ -43,20 +43,20 @@ void check_rand(double *ran, int N)
     cout << "Standard deviation: " << sqrt(var) << endl;
 }
 
-void mkl_rng(double *ran, const int n, const int method)
+void mkl_rng(double *ran, const int n, const int method, const int brng)
 {
     const double a = 0.0, b = 1.0;
     uint32_t iseed = 13579;
 
     int errcode;
     VSLStreamStatePtr stream;
-    errcode = vslNewStream(&stream, VSL_BRNG_MRG32K3A, iseed);
+    errcode = vslNewStream(&stream, brng, iseed);
     CheckVslError(errcode);
     errcode = vdRngUniform(method, stream, n, ran, a, b);
     vslDeleteStream(&stream);
 }
 
-void mkl_rng_tp(double *ran, const int n, const int method)
+void mkl_rng_tp(double *ran, const int n, const int method, const int brng)
 {
     const double a = 0.0, b = 1.0;
     uint32_t iseed = 13579;
@@ -72,7 +72,7 @@ void mkl_rng_tp(double *ran, const int n, const int method)
         if (tid == tnum - 1) {
             each_n = n - each_n * tid;
         }
-        errcode = vslNewStream(&stream, VSL_BRNG_MRG32K3A, iseed);
+        errcode = vslNewStream(&stream, brng, iseed);
         vslSkipAheadStream(stream, each_n * tid);
         CheckVslError(errcode);
         errcode = vdRngUniform(method, stream, each_n, ran + start, a, b);
@@ -87,7 +87,9 @@ int main(int argc, char **argv)
     double *ran;
     double start, end, msec, ave_msec, mrng;
     uint32_t iseed;
-    int tnum = omp_get_max_threads();
+    int tnum;
+
+    tnum = omp_get_max_threads();
 
     iseed = 13579;
     if (argc > 1) {
@@ -100,6 +102,7 @@ int main(int argc, char **argv)
     mrg8 m(iseed);
     ran = new double[N];
 
+#if 0
     /* Sequential Random Generator - ver1*/
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -118,7 +121,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ1, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_SEQ1, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
 
     /* Sequential Random Generator - ver2*/
     ave_msec = 0;
@@ -138,7 +141,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ2, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_SEQ2, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
 
     /* Vectorized Random Generator - inner */
     ave_msec = 0;
@@ -158,7 +161,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_INNER, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_VEC_INNER, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
 
     /* Vectorized Random Generator - outer */
     ave_msec = 0;
@@ -178,13 +181,13 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_OUTER, " << "1, " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_VEC_OUTER, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
 
-    /* MKL RNG -accurate- */
+    /* MKL RNG -VSL_BRNG_MRG32K3A_Accurate- */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
         start = omp_get_wtime();
-        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE);
+        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE, VSL_BRNG_MRG32K3A);
         end = omp_get_wtime();
         msec = (end - start) * 1000;
 #ifdef DEBUG
@@ -198,13 +201,13 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_ACCURATE, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MKL_VSL_BRNG_MRG32K3A_ACCURATE, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
 
-    /* MKL RNG -fast- */
+    /* MKL RNG -VSL_BRNG_MRG32K3A_Fast- */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
         start = omp_get_wtime();
-        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD);
+        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD, VSL_BRNG_MRG32K3A);
         end = omp_get_wtime();
         msec = (end - start) * 1000;
 #ifdef DEBUG
@@ -218,8 +221,89 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_FAST, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MKL_VSL_BRNG_MRG32K3A_FAST, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
     
+    /* MKL RNG -VSL_BRNG_SFMT19937_Accurate- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE, VSL_BRNG_SFMT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_SFMT19937_ACCURATE, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
+
+    /* MKL RNG -VSL_BRNG_SFMT19937_Fast- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD, VSL_BRNG_SFMT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_SFMT19937_FAST, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
+    
+    /* MKL RNG -VSL_BRNG_MT19937_Accurate- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE, VSL_BRNG_MT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_MT19937_ACCURATE, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
+
+    /* MKL RNG -VSL_BRNG_MT19937_Fast- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng(ran, N, VSL_RNG_METHOD_UNIFORM_STD, VSL_BRNG_MT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_MT19937_FAST, " << "1, " << N << ", " << mrng << ", " << ave_msec << endl;
+    
+#else
     /* Thread-Parallel Sequential Random Generator - ver1 */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -238,7 +322,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ1_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_SEQ1_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
 
     /* Thread-Parallel Sequential Random Generator - ver2 */
     ave_msec = 0;
@@ -258,7 +342,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_SEQ2_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_SEQ2_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
 
     /* Thread-Parallel and Vectorized Random Generator - inner */
     ave_msec = 0;
@@ -278,7 +362,7 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_INNER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_VEC_INNER_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
 
     /* Thread-Parallel and Vectorized Random Generator - outer */
     ave_msec = 0;
@@ -298,13 +382,13 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_OUTER_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MRG8_VEC_OUTER_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
 
-    /* Thread-Parallel MKL RNG -accurate- */
+    /* Thread-Parallel MKL RNG -MRG32K3A-Accurate- */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
         start = omp_get_wtime();
-        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE);
+        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE, VSL_BRNG_MRG32K3A);
         end = omp_get_wtime();
         msec = (end - start) * 1000;
 #ifdef DEBUG
@@ -318,13 +402,13 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_ACCURATE_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MKL_VSL_BRNG_MRG32K3A_ACCURATE_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
 
-    /* Thread-Parallel MKL RNG -fast- */
+    /* Thread-Parallel MKL RNG -VSL_BRNG_MRG32K3A-Fast- */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
         start = omp_get_wtime();
-        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD);
+        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD, VSL_BRNG_MRG32K3A);
         end = omp_get_wtime();
         msec = (end - start) * 1000;
 #ifdef DEBUG
@@ -338,9 +422,91 @@ int main(int argc, char **argv)
     }
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
-    cout << "MKL_FAST_TP, " << tnum << ", " << N << ", " << mrng << " * 10^6, " << ave_msec << endl;
+    cout << "MKL_VSL_BRNG_MRG32K3A_FAST_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
+
+    /* Thread-Parallel MKL RNG -VSL_BRNG_SFMT19937-Accurate- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE, VSL_BRNG_SFMT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_SFMT19937_ACCURATE_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
+
+    /* Thread-Parallel MKL RNG -VSL_BRNG_SFMT19937-Fast- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD, VSL_BRNG_SFMT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_SFMT19937_FAST_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
+
+    /* Thread-Parallel MKL RNG -VSL_BRNG_MT19937-Accurate- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD_ACCURATE, VSL_BRNG_MT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_MT19937_ACCURATE_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
+
+    /* Thread-Parallel MKL RNG -VSL_BRNG_MT19937-Fast- */
+    ave_msec = 0;
+    for (i = 0; i < ITER; ++i) {
+        start = omp_get_wtime();
+        mkl_rng_tp(ran, N, VSL_RNG_METHOD_UNIFORM_STD, VSL_BRNG_MT19937);
+        end = omp_get_wtime();
+        msec = (end - start) * 1000;
+#ifdef DEBUG
+        if (i == 0) {
+            check_rand(ran, N);
+        }
+#endif
+        if (i > 0) {
+            ave_msec += msec;
+        }
+    }
+    ave_msec /= (ITER - 1);
+    mrng = (double)(N) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_MT19937_FAST_TP, " << tnum << ", " << N << ", " << mrng << ", " << ave_msec << endl;
+#endif
     
     delete[] ran;
+    // scalable_free(ran);
 
     return 0;
 }

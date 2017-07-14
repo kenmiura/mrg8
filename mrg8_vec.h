@@ -18,7 +18,6 @@
 // S[k]'s are 31-bit integers
 // Period of this random sequence is (2 ^ 31 - 1)^ 8 - 1 =~ 4.5 * 10^74
 
-
 class mrg8 {
 public:
 	const uint32_t MAX_RND;

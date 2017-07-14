@@ -664,7 +664,7 @@ void mrg8::rand_tp(double * ran, int n)
         if (tid == (tnum - 1)) {
             each_n = n - each_n * tid;
         }
-        jump_ahead(start, each_state);
+        // jump_ahead(start, each_state);
         rand(ran + start, each_n, each_state);
         delete[] each_state;
     }
@@ -683,7 +683,7 @@ void mrg8::mrg8dnz2_tp(double * ran, int n)
         if (tid == (tnum - 1)) {
             each_n = n - each_n * tid;
         }
-        jump_ahead(start, each_state);
+        // jump_ahead(start, each_state);
         mrg8dnz2(ran + start, each_n, each_state);
         delete[] each_state;
     }
@@ -702,7 +702,7 @@ void mrg8::mrg8_vec_inner_tp(double * ran, int n)
         if (tid == (tnum - 1)) {
             each_n = n - each_n * tid;
         }
-        jump_ahead(start, each_state);
+        // jump_ahead(start, each_state);
         mrg8_vec_inner(ran + start, each_n, each_state);
         delete[] each_state;
     }
@@ -721,7 +721,7 @@ void mrg8::mrg8_vec_outer_tp(double * ran, int n)
         if (tid == (tnum - 1)) {
             each_n = n - each_n * tid;
         }
-        jump_ahead(start, each_state);
+        // jump_ahead(start, each_state);
         mrg8_vec_outer(ran + start, each_n, each_state);
         delete[] each_state;
     }
