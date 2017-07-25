@@ -1,3 +1,10 @@
+/*
+ * stream.cpp
+ * Evaluate Bandwidth of writing memory
+ *  Created on: July 25, 2017
+ *      Author: Yusuke
+ */
+
 #include <iostream>
 #include <omp.h>
 
@@ -21,12 +28,16 @@ int main(int argc, char **argv)
     double start, end, msec, ave_msec, bandwidth;
     double *a;
 
+    cout << "Running on " << omp_get_max_threads() << "threads" << endl;
+
     if (argc > 1) {
         N = atoi(argv[1]) * 1024 * 1024;
     }
     else {
         N = 1024 * 1024;
     }
+
+    cout << "Evaluating on " << N << " of 64-bit elements (= " << N * sizeof(double) << " [Bytes]" << endl;
 
     a = new double[N];
 
@@ -43,7 +54,7 @@ int main(int argc, char **argv)
 
     ave_msec /= (ITER - 1);
     bandwidth = (double)N * sizeof(double) / 1024 / 1024 / ave_msec;
-    cout << "StreamTest, " << N << ", " << bandwidth << ", " << ave_msec << endl;
+    cout << "StreamTest (Write only) : " << bandwidth << " [GB/sec], " << ave_msec << " [milli seconds]" << endl;
 
     delete[] a;
     

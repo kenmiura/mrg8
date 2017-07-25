@@ -3,10 +3,10 @@
  *
  *  Created on: Apr 6, 2015
  *      Author: aghasemi
+ *  Updated on: Jul 15, 2017
+ *      Author: Yusuke
  */
 
-#ifndef MRG8_H_
-#define MRG8_H_
 #include <vector>
 #include <stdint.h> // for uint32_t and uint64_t
 
@@ -16,7 +16,6 @@
 // Coefficients Ak are carefully chosen 31-bit integers
 // S[k]'s are 31-bit integers
 // Period of this random sequence is (2 ^ 31 - 1)^ 8 - 1 =~ 4.5 * 10^74
-
 
 class mrg8 {
 public:
@@ -38,6 +37,10 @@ public:
     /* Sequential Random Generator for double ver.1 */
 	void rand(double * fran, int n);
 	double rand();
+    double operator() ()
+    {
+        return rand();
+    }
     
     /* Sequential Random Generator for double ver.2 */
     void mrg8dnz2(double * ran, int n);
@@ -48,9 +51,11 @@ public:
 	void rand_tp(double *ran, int n);
     void mrg8dnz2_tp(double *ran, int n);
 
-private:
+protected:
 	const uint64_t MASK;//2^31 - 1
 	const uint32_t COEFF0, COEFF1, COEFF2, COEFF3, COEFF4, COEFF5, COEFF6, COEFF7;
+    
+    bool isJumpMatrix;
     
 	uint32_t iseed;
 	std::vector<uint32_t> JUMP_MATRIX;
@@ -62,9 +67,9 @@ private:
 	uint32_t bigDotProd(const uint32_t x[8], const uint32_t y[8]) const;
 	void dec2bin(const uint64_t jval, short jump_val_bin[200]) const;
 
+private:
 	void randint(uint32_t * iran, int n, uint32_t *new_state);
 	void rand(double * fran, int n, uint32_t *new_state);
     void mrg8dnz2(double * ran, int n, uint32_t *new_state);
 };
 
-#endif /* MRG8_H_ */

@@ -4,7 +4,7 @@
  *  Created on: Apr 6, 2015
  *      Author: aghasemi
  *  Updated on: Jul 15, 2017
- *      Author: yusuke
+ *      Author: Yusuke
  */
 
 #include "mrg8.h"
@@ -15,16 +15,15 @@
 #include <cmath>
 #include <omp.h>
 
-// MASK = (2^31 - 1)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-mrg8::mrg8(): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(1927846343), iseed(0), JUMP_MATRIX(8 * 8 * 247)
+mrg8::mrg8(): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(1927846343), iseed(0), JUMP_MATRIX(8 * 8 * 247), isJumpMatrix(false)
 {
 	mcg64ni();
 	read_jump_matrix();
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-mrg8::mrg8(const uint32_t seed_val): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(1927846343), iseed(seed_val), JUMP_MATRIX(8 * 8 * 247)
+mrg8::mrg8(const uint32_t seed_val): MAX_RND(2147483646), MASK(2147483647), COEFF0(1089656042), COEFF1(1906537547), COEFF2(1764115693), COEFF3(1304127872), COEFF4(189748160), COEFF5(1984088114), COEFF6(626062218), COEFF7(1927846343), iseed(seed_val), JUMP_MATRIX(8 * 8 * 247), isJumpMatrix(false)
 {
 	mcg64ni();
 	read_jump_matrix();
@@ -59,8 +58,9 @@ void mrg8::print_state() const
 void mrg8::print_matrix(const uint32_t jm[8][8]) const
 {
 	for (int i = 0; i < 8;++i) {
-		for(int j = 0; j < 8; ++j)
+		for(int j = 0; j < 8; ++j) {
 			std::cout<<std::setw(10)<<jm[i][j]<<" ";
+        }
 		std::cout << std::endl;
 	}
 }
@@ -92,7 +92,7 @@ uint32_t mrg8::bigDotProd(const uint32_t x[8], const uint32_t y[8]) const
 		s2 += uint64_t(x[4 + q]) * y[4 + q];
 	}
 	s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + ( s2 >> 31);
-	s = (s & MASK) + (s >> 31);
+	// s = (s & MASK) + (s >> 31);
 	return ((s & MASK) + (s >> 31));
 }
 
@@ -102,6 +102,8 @@ uint32_t mrg8::bigDotProd(const uint32_t x[8], const uint32_t y[8]) const
 // Each matrix is in column order, that is (A^(2^j))(r,c) = JUMP_MATRIX[j * 64 + r + 8*c]
 void mrg8::read_jump_matrix()
 {
+    if (isJumpMatrix) return;
+
 	std::ifstream infile;
 	infile.open("jump_matrix.txt");
 	if(infile.fail()){
@@ -110,11 +112,12 @@ void mrg8::read_jump_matrix()
 	}
 
 	uint32_t t;
-	for(int k=0;k<8*8*247;++k){
+	for (int k = 0; k < 8 * 8 * 247; ++k) {
 		infile >> t;
 		JUMP_MATRIX[k] = t;
 	}
     infile.close();
+    isJumpMatrix = true;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -123,7 +126,7 @@ void mrg8::jump_ahead(const short jump_val_bin[200], uint32_t *new_state)
 {
 	uint32_t jump_mat[8][8], rowVec[8];
 
-	//calculating the jump matrix
+	// Calculating the jump matrix
 	jump_calc(jump_val_bin, jump_mat);
 
 	// Multiply the current state by jump_mat
@@ -152,8 +155,9 @@ void mrg8::dec2bin(const uint64_t jval, short jump_val_bin[200]) const
 	}
 
 	for (int nb = 0; nb < 64; ++nb) {
-		if (jval & (1ul << nb))
+		if (jval & (1ul << nb)) {
 			jump_val_bin[nb] = 1;
+        }
 	}
 }
 
@@ -166,14 +170,16 @@ void mrg8::jump_calc(const short jump_val_bin[200], uint32_t jump_mat[8][8])
 
 	for (int r = 0; r < 8; ++r) {
 		for (int c = 0; c < 8; ++c) {
-			if (r == c)
+			if (r == c) {
 				jump_mat[r][c] = 1;
-			else
+            }
+			else {
 				jump_mat[r][c] = 0;
+            }
 		}
 	}
 
-	for (int nb = 0;nb < 200;++nb) {
+	for (int nb = 0; nb < 200; ++nb) {
 		if (jump_val_bin[nb]) {
 			for (int r = 0; r < 8; ++r){
 				for (int c = 0; c < 8; ++c){
@@ -242,18 +248,13 @@ void mrg8::randint(uint32_t * iran, int n, uint32_t *new_state)
 
 void mrg8::randint(uint32_t * iran, int n)
 {
-    uint32_t *new_state = new uint32_t[8];
-    for (int i = 0; i < 8; ++i) {
-        new_state[i] = state[i];
-    }
-    randint(iran, n, new_state);
-    delete[] new_state;
+    randint(iran, n, state);
 }
 
 uint32_t mrg8::randint()
 {
 	uint32_t r[1];
-	randint(r, 1);
+	randint(r, 1, state);
 	return r[0];
 }
 
@@ -272,18 +273,14 @@ void mrg8::rand(double * fran, int n, uint32_t *new_state)
 
 void mrg8::rand(double * ran, int n)
 {
-    uint32_t *new_state = new uint32_t[8];
-    for (int i = 0; i < 8; ++i) {
-        new_state[i] = state[i];
-    }
-    rand(ran, n, new_state);
-    delete[] new_state;
+    rand(ran, n, state);
 }
 
-double mrg8::rand() {
-	double r[1];
-	rand(r, 1);
-	return r[0];
+double mrg8::rand()
+{
+	double r;
+	rand(&r, 1, state);
+	return r;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -308,8 +305,7 @@ void mrg8::mrg8dnz2(double * ran, int n, uint32_t *new_state)
 	a[7] = COEFF7;
 
     for (k = 0; k < 8; ++k) {
-        x[k] = new_state[k];
-        x[kmax + k] = x[k];
+        x[kmax + k] = new_state[k];
     }
     
     nn = n % kmax;
@@ -331,37 +327,17 @@ void mrg8::mrg8dnz2(double * ran, int n, uint32_t *new_state)
         }
     }
 
+    for (k = 0; k < 8; ++k) {
+        new_state[k] = x[kmax + k];
+    }
     if (nn > 0) {
-        for (i = 0; i < nn; ++i) {
-            s1 = 0;
-            s2 = 0;
-            for (j = 0; j < 4; ++j) {
-                s1 += uint64_t(a[j]) * x[j];
-                s2 += uint64_t(a[j + 4]) * x[j + 4];
-            }
-            s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
-            x[7] = x[6];
-            x[6] = x[5];
-            x[5] = x[4];
-            x[4] = x[3];
-            x[3] = x[2];
-            x[2] = x[1];
-            x[1] = x[0];
-            x[0] = (s & MASK) + (s >> 31);
-            ran[n - nn + i] = static_cast<double>(x[0]) * rnorm;
-        }
+        rand(ran + (n - nn), nn, new_state);
     }
 }
 
 void mrg8::mrg8dnz2(double * ran, int n)
 {
-    uint32_t *new_state = new uint32_t[8];
-    for (int i = 0; i < 8; ++i) {
-        new_state[i] = state[i];
-    }
-    mrg8dnz2(ran, n, new_state);
-    delete[] new_state;
-
+    mrg8dnz2(ran, n, state);
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -369,7 +345,7 @@ void mrg8::mrg8dnz2(double * ran, int n)
 void mrg8::rand_tp(double * ran, int n)
 {
     int tnum = omp_get_max_threads();
-
+    uint32_t next_state[8];
 #pragma omp parallel
     {
         int each_n = n / tnum;
@@ -381,14 +357,22 @@ void mrg8::rand_tp(double * ran, int n)
         }
         jump_ahead(start, each_state);
         rand(ran + start, each_n, each_state);
+        if (tid == tnum - 1) {
+            for (int j = 0; j < 8; ++j) {
+                next_state[j] = each_state[j];
+            }
+        }
         delete[] each_state;
+    }
+    for (int i = 0; i < 8; ++i) {
+        state[i] = next_state[i];
     }
 }
 
 void mrg8::mrg8dnz2_tp(double * ran, int n)
 {
     int tnum = omp_get_max_threads();
-
+    uint32_t next_state[8];
 #pragma omp parallel
     {
         int each_n = n / tnum;
@@ -400,7 +384,15 @@ void mrg8::mrg8dnz2_tp(double * ran, int n)
         }
         jump_ahead(start, each_state);
         mrg8dnz2(ran + start, each_n, each_state);
+        if (tid == tnum - 1) {
+            for (int j = 0; j < 8; ++j) {
+                next_state[j] = each_state[j];
+            }
+        }
         delete[] each_state;
+    }
+    for (int i = 0; i < 8; ++i) {
+        state[i] = next_state[i];
     }
 }
 
