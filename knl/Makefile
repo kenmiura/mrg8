@@ -12,8 +12,7 @@ OBJ_TEST = ./tests
 BIN = ./bin
 
 all:
-	make mrg8
-	make mrg8_vec
+	make test
 
 test:
 	make test_mrg8_single
