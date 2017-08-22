@@ -48,8 +48,8 @@ public:
     /*  Thread parallel Random Generator */
 	void jump_ahead(const short jump_val_bin[200], uint32_t *new_state);
 	void jump_ahead(const uint64_t jump_val, uint32_t *new_state);
-	void rand_tp(double *ran, int n);
-    void mrg8dnz2_tp(double *ran, int n);
+	/* void rand_tp(double *ran, int n); */
+    /* void mrg8dnz2_tp(double *ran, int n); */
 
 protected:
 	const uint64_t MASK;//2^31 - 1

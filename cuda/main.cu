@@ -19,7 +19,7 @@
 using namespace std;
 
 #define ITER 10
-// #define DEBUG
+#define DEBUG
 
 void check_rand(double *ran, int N)
 {
@@ -57,6 +57,7 @@ int main(int argc, char **argv)
     iseed = 13579;
     if (argc > 1) {
         N = atoi(argv[1]) * 1024 * 1024;
+        // N = atoi(argv[1]);
     }
     else {
         N = 1 * 1024 * 1024;
@@ -69,7 +70,7 @@ int main(int argc, char **argv)
     // cout << "Start Random Generate on GPU" << endl;
     // cout << "Algorithm, Size, million RNG/sec, average milli second" << endl << endl;
 
-#if 1
+#if 0
     /* cuRAND-MRG32K3A Random Generator - GPU */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -152,13 +153,15 @@ int main(int argc, char **argv)
     cout << ", cuRAND_MTGP32, " << N << ", " << mrng << ", " << ave_msec << endl;
 #endif
 
-    mrg8 m(iseed);
-
-#if 0
+    mrg8_cuda m(iseed);
+    
+    m.print_state();
+#if 1
     /* Sequential Random Generator - ver1*/
     struct timeval start, end;
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
+        m.seed_init(iseed);
         gettimeofday(&start, NULL);
         m.rand(ran, N);
         gettimeofday(&end, NULL);
@@ -175,12 +178,15 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_SEQ1, " << N << ", " << mrng << ", " << ave_msec << endl;
+    m.print_state();
 #endif
 
+#if 1
     for (int TNUM = 64; TNUM <= 1024 * 1024; TNUM *= 2) {
         /* MRG8-CUDA inner */
         ave_msec = 0;
         for (i = 0; i < ITER; ++i) {
+            m.seed_init(iseed);
             cudaEventRecord(event[0], 0);
             m.mrg8_inner(d_ran, N, TNUM);
             cudaEventRecord(event[1], 0);
@@ -200,12 +206,15 @@ int main(int argc, char **argv)
         mrng = (double)(N) / ave_msec / 1000;
         cout << TNUM << ", ";
         cout << "MRG8_CUDA_inner, " << N << ", " << mrng << ", " << ave_msec << endl;
+        m.state_cpy_DtH();
+        m.print_state();
 
         /* MRG8-CUDA outer_32 */
         for (int BS = 32; BS < 1024; BS = BS << 1) {
             if (BS > TNUM) continue;
             ave_msec = 0;
             for (i = 0; i < ITER; ++i) {
+                m.seed_init(iseed);
                 cudaEventRecord(event[0], 0);
                 m.mrg8_outer_32(d_ran, N, BS, TNUM);
                 cudaEventRecord(event[1], 0);
@@ -225,32 +234,12 @@ int main(int argc, char **argv)
             mrng = (double)(N) / ave_msec / 1000;
             cout << TNUM << ", ";
             cout << "MRG8_CUDA_outer_32_" << BS << ", " << N << ", " << mrng << ", " << ave_msec << endl;
-        }
-    
-        /* MRG8-CUDA outer_64 */
-        ave_msec = 0;
-        for (i = 0; i < ITER; ++i) {
-            cudaEventRecord(event[0], 0);
-            m.mrg8_outer_64(d_ran, N, TNUM);
-            cudaEventRecord(event[1], 0);
-            cudaThreadSynchronize();
-            cudaEventElapsedTime(&msec, event[0], event[1]);
-#ifdef DEBUG
-            if (i == 0) {
-                cudaMemcpy(ran, d_ran, sizeof(double) * N, cudaMemcpyDeviceToHost);
-                check_rand(ran, N);
-            }
-#endif
-            if (i > 0) {
-                ave_msec += msec;
-            }
-        }
-        ave_msec /= (ITER - 1);
-        mrng = (double)(N) / ave_msec / 1000;
-        cout << TNUM << ", ";
-        cout << "MRG8_CUDA_outer_64, " << N << ", " << mrng << ", " << ave_msec << endl;
+            m.state_cpy_DtH();
+            m.print_state();
+      }
     }
     
+#endif
     cudaFree(d_ran);
     delete[] ran;
     for (i = 0; i < 2; ++i) {

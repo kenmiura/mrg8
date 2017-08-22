@@ -143,6 +143,7 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_SEQ1: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
+    print_state();
 
     /* Sequential Random Generator - ver1*/
     ave_msec = 0;
