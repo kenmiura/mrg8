@@ -9,7 +9,10 @@
 
 #include <vector>
 #include <stdint.h> // for uint32_t and uint64_t
+#include <iostream>
+#include <cmath>
 
+using namespace std;
 
 // S[n] = (A0* S[n-1] + A1 * S[n-2] + ...+ A7 * S[n-8]) mod (2^31-1)
 // y[n] = S[n]
@@ -74,4 +77,3 @@ private:
 	void rand(double * fran, int n, uint32_t *new_state);
     void mrg8dnz2(double * ran, int n, uint32_t *new_state);
 };
-
