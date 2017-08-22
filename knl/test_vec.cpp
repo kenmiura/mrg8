@@ -67,27 +67,6 @@ int main(int argc, char **argv)
     mrg8_vec m(iseed);
     ran = new double[N];
 
-    /* Vectorized Random Generator - inner */
-    ave_msec = 0;
-    for (i = 0; i < ITER; ++i) {
-        m.seed_init(iseed);
-        start = omp_get_wtime();
-        m.mrg8_vec_inner(ran, N);
-        end = omp_get_wtime();
-        msec = (end - start) * 1000;
-#ifdef DEBUG
-        if (i == 0) {
-            check_rand(ran, N);
-        }
-#endif
-        if (i > 0) {
-            ave_msec += msec;
-        }
-    }
-    ave_msec /= (ITER - 1);
-    mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_INNER: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
-
     /* Vectorized Random Generator - outer */
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -111,27 +90,6 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_VEC_OUTER (non-array): " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
-
-    /* Vectorized Random Generator - outer */
-    ave_msec = 0;
-    for (i = 0; i < ITER; ++i) {
-        m.seed_init(iseed);
-        start = omp_get_wtime();
-        m.mrg8_vec_outer(ran, N);
-        end = omp_get_wtime();
-        msec = (end - start) * 1000;
-#ifdef DEBUG
-        if (i == 0) {
-            check_rand(ran, N);
-        }
-#endif
-        if (i > 0) {
-            ave_msec += msec;
-        }
-    }
-    ave_msec /= (ITER - 1);
-    mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_VEC_OUTER: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
 
     /* Thread-Parallel and Vectorized Random Generator - inner */
     ave_msec = 0;
