@@ -19,18 +19,13 @@ all:
 test: $(addprefix $(BIN)/,$(TEST_TARGET))
 
 $(BIN)/%: $(MV_OBJ) $(SRC)/%.o
-	@echo $@
 	$(ICPC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $@ $^
 
 %.o : %.cpp
-	@echo $@
 	$(ICPC) -c $(FLAGS) $(INCLUDE) -o $@ $<
 
-
-# stream : stream.o
-# 	$(ICPC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ stream.o
-
-
+stream : stream.o
+	$(ICPC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ stream.o
 
 clean :
 	rm -f *.o $(BIN)/* $(OBJ_TEST)/*.o
