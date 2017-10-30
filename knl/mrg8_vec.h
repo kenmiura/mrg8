@@ -20,8 +20,10 @@ public:
 
     void mrg8_vec_inner(double *ran, int n);
     double mrg8_vec_inner();
+    double mrg8_vec_inner(uint32_t *new_state);
     void mrg8_vec_outer(double * ran, int n);
     double mrg8_vec_outer();
+    double mrg8_vec_outer(uint32_t *new_state);
     double operator() ()
     {
         return mrg8_vec_outer();

@@ -23,7 +23,7 @@
 
 using namespace std;
 
-// #define AVX512
+#define AVX512
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 mrg8_vec::mrg8_vec(): mrg8()
@@ -119,7 +119,7 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
     }
     
     if (((i >> 3) & 1) == 0) {
-        for (k = 0; k < 8; ++k) {
+        for (k = 0; k < (n - i); ++k) {
             a_m = _mm512_load_epi64(A8_IP_MATRIX + k * 8);
             s1_m = _mm512_mul_epu32(a_m, state1_m);
             s_m = _mm512_and_epi64(s1_m, mask_m);
@@ -140,7 +140,7 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
         for (k = 0; k < n - i; ++k) {
             ran[i + k] = ran_m[k];
         }
-
+        
         for (j = k; j < 8; ++j) {
             each_state[7 - (j - k)] = (uint32_t)(state1_m[j]);
         }
@@ -149,7 +149,7 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
         }
     }
     else {
-        for (k = 0; k < 8; ++k) {
+        for (k = 0; k < (n - i); ++k) {
             a_m = _mm512_load_epi64(A8_IP_MATRIX + k * 8);
             s1_m = _mm512_mul_epu32(a_m, state2_m);
             s_m = _mm512_and_epi64(s1_m, mask_m);
@@ -223,6 +223,13 @@ double mrg8_vec::mrg8_vec_inner()
     return r;
 }
 
+double mrg8_vec::mrg8_vec_inner(uint32_t *new_state)
+{
+    double r;
+    mrg8_vec_inner(&r, 1, new_state);
+    return r;
+}
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
 {
@@ -278,6 +285,7 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
         ran_m = _mm512_cvtepi32_pd(state_32m);
         ran_m = _mm512_mul_pd(ran_m, rnorm_m);
         _mm512_store_pd(ran + i, ran_m);
+        // _mm512_store_pd(ran, ran_m);
     }
 
     /* Fraction */
@@ -318,6 +326,7 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
     ran_m = _mm512_mul_pd(ran_m, rnorm_m);
     for (j = 0; j < n - i; ++j) {
         ran[i + j] = ran_m[j];
+        // ran[j] = ran_m[j];
     }
 
     for (i = 0; i < j; ++i) {
@@ -373,6 +382,13 @@ double mrg8_vec::mrg8_vec_outer()
 {
     double r;
     mrg8_vec_outer(&r, 1, state);
+    return r;
+}
+
+double mrg8_vec::mrg8_vec_outer(uint32_t *new_state)
+{
+    double r;
+    mrg8_vec_outer(&r, 1, new_state);
     return r;
 }
 

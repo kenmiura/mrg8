@@ -278,9 +278,22 @@ void mrg8::rand(double * ran, int n)
 
 double mrg8::rand()
 {
-	double r;
-	rand(&r, 1, state);
-	return r;
+	const double rnorm = 1.0/static_cast<double>(MASK);
+    uint32_t ir;
+    randint(&ir, 1, state);
+    return static_cast<double>(ir) * rnorm;
+}
+
+double mrg8::rand(uint32_t *new_state)
+{
+	// double r;
+	// rand(&r, 1, new_state);
+	// return r;
+
+	const double rnorm = 1.0/static_cast<double>(MASK);
+    uint32_t ir;
+    randint(&ir, 1, new_state);
+    return static_cast<double>(ir) * rnorm;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

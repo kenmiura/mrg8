@@ -67,6 +67,7 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_VEC_OUTER_SINGLE: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
+    printf("EVALUATION, MRG8_VEC_OUTER_SINGLE, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
 
     delete[] ran;
 

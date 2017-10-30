@@ -64,6 +64,7 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MKL_VSL_BRNG_MT19937_FAST_TP: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
+    printf("EVALUATION, MKL_VSL_BRNG_MT19937_FAST_TP, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
 
     delete[] ran;
 

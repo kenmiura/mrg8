@@ -37,6 +37,7 @@ public:
     /* Sequential Random Generator for double ver.1 */
 	void rand(double * fran, int n);
 	double rand();
+    double rand(uint32_t *new_state);
     double operator() ()
     {
         return rand();
