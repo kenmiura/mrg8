@@ -15,6 +15,8 @@ mrg8 : $(OBJ)
 test :
 	make test_curand_mrg32k3a
 	make test_curand_mt19937
+	make test_curand_philox4_32_10
+	make test_curand_xorwow
 	make test_curand_mtgp32
 	make test_mrg8_inner
 	make test_mrg8_outer
@@ -26,6 +28,14 @@ test_curand_mrg32k3a : test_curand_mrg32k3a.o
 test_curand_mt19937 : test_curand_mt19937.o
 	mkdir -p $(BIN)
 	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_mt19937.o
+
+test_curand_philox4_32_10 : test_curand_philox4_32_10.o
+	mkdir -p $(BIN)
+	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_philox4_32_10.o
+
+test_curand_xorwow : test_curand_xorwow.o
+	mkdir -p $(BIN)
+	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_xorwow.o
 
 test_curand_mtgp32 : test_curand_mtgp32.o
 	mkdir -p $(BIN)
