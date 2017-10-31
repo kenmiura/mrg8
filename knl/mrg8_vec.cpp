@@ -177,7 +177,230 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
             each_state[k - j - 1] = (uint32_t)(state1_m[j]);
         }
     }
+// #elif defined AVX2
+//     const __m256i true_m = _mm256_set1_epi64x(0xffffffffffffffff);
+    
+//     int i, j, k;
+//     double rnorm = 1.0 / static_cast<double>(MASK);
+//     uint64_t r_state[8];
+//     __m256i state11_m, state12_m, state21_m, state22_m, s1_m, s2_m, s_m, mask_m, a_m;
+//     __m256d ran_m, rnorm_m;
+//     __m128i s1_32m, s2_32m;
+//     uint64_t s;
+    
+//     for (i = 0; i < 8; ++i) {
+//         r_state[i] = (uint64_t)(each_state[7 - i]);
+//     }
+    
+//     state11_m = _mm256_maskload_epi64(r_state, true_m);
+//     state12_m = _mm256_maskload_epi64(r_state + 4, true_m);
+//     mask_m = _mm256_set1_epi64x(MASK);
+//     rnorm_m = _mm256_set1_pd(rnorm);
+    
+//     for (i = 0; i < n - 8; i+=8) {
+//         if (((i >> 3) & 1) == 0) {
+//             for (k = 0; k < 8; ++k) {
+//                 a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8, true_m);
+//                 s1_m = _mm256_mul_epu32(a_m, state11_m);
+//                 a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8 + 4, true_m);
+//                 s2_m = _mm256_mul_epu32(a_m, state12_m);
 
+//                 s_m = _mm256_add_epi64(s1_m, s2_m);
+//                 s1_m = _mm256_and_si256(s_m, mask_m);
+//                 s2_m = _mm256_srli_epi64(s_m, 31);
+//                 s_m = _mm256_add_epi64(s1_m, s2_m);
+//                 s = s_m[0] + s_m[1] + s_m[2] + s_m[3];
+
+//                 if (k < 4) {
+//                     state21_m[k] = s;
+//                 }
+//                 else {
+//                     state21_m[k - 4] = s;
+//                 }
+//             }
+//             s_m = _mm256_and_si256(state21_m, mask_m);
+//             state21_m = _mm256_srli_epi64(state21_m, 31);
+//             state21_m = _mm256_add_epi64(s_m, state21_m);
+//             s_m = _mm256_and_si256(state22_m, mask_m);
+//             state22_m = _mm256_srli_epi64(state22_m, 31);
+//             state22_m = _mm256_add_epi64(s_m, state22_m);
+            
+//             s_m = _mm256_set_epi32((int)state22_m[3], (int)state22_m[2], (int)state22_m[1], (int)state22_m[0], (int)state21_m[3], (int)state21_m[2], (int)state21_m[1], (int)state21_m[0]);
+            
+//             s1_32m = mm256_extractf128_si256(s_m, 0);
+//             s2_32m = mm256_extractf128_si256(s_m, 1);
+
+//             ran_m = _mm256_cvtepi32_pd(s1_32m);
+//             ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//             _mm256_store_pd(ran + i, ran_m);
+//             ran_m = _mm256_cvtepi32_pd(s2_32m);
+//             ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//             _mm256_store_pd(ran + i + 4, ran_m);
+//         }
+//         else {
+//             for (k = 0; k < 8; ++k) {
+//                 a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8, true_m);
+//                 s1_m = _mm256_mul_epu32(a_m, state11_m);
+//                 a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8 + 4, true_m);
+//                 s2_m = _mm256_mul_epu32(a_m, state12_m);
+
+//                 s_m = _mm256_add_epi64(s1_m, s2_m);
+//                 s1_m = _mm256_and_si256(s_m, mask_m);
+//                 s2_m = _mm256_srli_epi64(s_m, 31);
+//                 s_m = _mm256_add_epi64(s1_m, s2_m);
+//                 s = s_m[0] + s_m[1] + s_m[2] + s_m[3];
+
+//                 if (k < 4) {
+//                     state11_m[k] = s;
+//                 }
+//                 else {
+//                     state12_m[k - 4] = s;
+//                 }
+//             }
+//             s_m = _mm256_and_si256(state11_m, mask_m);
+//             state11_m = _mm256_srli_epi64(state11_m, 31);
+//             state11_m = _mm256_add_epi64(s_m, state11_m);
+//             s_m = _mm256_and_si256(state12_m, mask_m);
+//             state12_m = _mm256_srli_epi64(state12_m, 31);
+//             state12_m = _mm256_add_epi64(s_m, state12_m);
+
+//             s_m = _mm256_set_epi32((int)state12_m[3], (int)state12_m[2], (int)state12_m[1], (int)state12_m[0], (int)state11_m[3], (int)state11_m[2], (int)state11_m[1], (int)state11_m[0]);
+
+//             s1_32m = mm256_extractf128_si256(s_m, 0);
+//             s2_32m = mm256_extractf128_si256(s_m, 1);
+
+//             ran_m = _mm256_cvtepi32_pd(s1_32m);
+//             ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//             _mm256_store_pd(ran + i, ran_m);
+//             ran_m = _mm256_cvtepi32_pd(s2_32m);
+//             ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//             _mm256_store_pd(ran + i + 4, ran_m);
+//         }
+//     }
+    
+//     if (((i >> 3) & 1) == 0) {
+//         for (k = 0; k < (n - i); ++k) {
+//             a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8, true_m);
+//             s1_m = _mm256_mul_epu32(a_m, state11_m);
+//             a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8 + 4, true_m);
+//             s2_m = _mm256_mul_epu32(a_m, state12_m);
+
+//             s_m = _mm256_add_epi64(s1_m, s2_m);
+//             s1_m = _mm256_and_si256(s_m, mask_m);
+//             s2_m = _mm256_srli_epi64(s_m, 31);
+//             s_m = _mm256_add_epi64(s1_m, s2_m);
+//             s = s_m[0] + s_m[1] + s_m[2] + s_m[3];
+
+//             if (k < 4) {
+//                 state21_m[k] = s;
+//             }
+//             else {
+//                 state21_m[k - 4] = s;
+//             }
+//         }
+//         s_m = _mm256_and_si256(state21_m, mask_m);
+//         state21_m = _mm256_srli_epi64(state21_m, 31);
+//         state21_m = _mm256_add_epi64(s_m, state21_m);
+//         s_m = _mm256_and_si256(state22_m, mask_m);
+//         state22_m = _mm256_srli_epi64(state22_m, 31);
+//         state22_m = _mm256_add_epi64(s_m, state22_m);
+            
+//         s_m = _mm256_set_epi32((int)state22_m[3], (int)state22_m[2], (int)state22_m[1], (int)state22_m[0], (int)state21_m[3], (int)state21_m[2], (int)state21_m[1], (int)state21_m[0]);
+            
+//         s1_32m = mm256_extractf128_si256(s_m, 0);
+//         s2_32m = mm256_extractf128_si256(s_m, 1);
+
+//         ran_m = _mm256_cvtepi32_pd(s1_32m);
+//         ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//         _mm512_store_pd(ran + i, ran_m);
+//         for (k = 0; k < n - i; ++k) {
+//             if (k < 4) {
+//                 ran[i + k] = ran_m[k];
+//             }
+//         }
+        
+//         ran_m = _mm256_cvtepi32_pd(s2_32m);
+//         ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//         _mm512_store_pd(ran + i + 4, ran_m);
+//         for (k = 4; k < n - i; ++k) {
+//             ran[i + k] = ran_m[k];
+//         }
+            
+//         for (j = k; j < 8; ++j) {
+//             if (j < 4) {
+//                 each_state[7 - (j - k)] = (uint32_t)(state11_m[j]);
+//             }
+//             else {
+//                 each_state[7 - (j - k)] = (uint32_t)(state12_m[j]);
+//             }
+//         }
+//         for (j = 0; j < k; ++j) {
+//             if (j < 4) {
+//                 each_state[k - j - 1] = (uint32_t)(state21_m[j]);
+//             }
+//             else {
+//                 each_state[k - j - 1] = (uint32_t)(state22_m[j]);
+//             }
+//         }
+//     }
+//     else {
+//         for (k = 0; k < (n - i); ++k) {
+//             a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8, true_m);
+//             s1_m = _mm256_mul_epu32(a_m, state11_m);
+//             a_m = _mm256_maskload_epi64(A8_IP_MATRIX + k * 8 + 4, true_m);
+//             s2_m = _mm256_mul_epu32(a_m, state12_m);
+
+//             s_m = _mm256_add_epi64(s1_m, s2_m);
+//             s1_m = _mm256_and_si256(s_m, mask_m);
+//             s2_m = _mm256_srli_epi64(s_m, 31);
+//             s_m = _mm256_add_epi64(s1_m, s2_m);
+//             s = s_m[0] + s_m[1] + s_m[2] + s_m[3];
+
+//             if (k < 4) {
+//                 state11_m[k] = s;
+//             }
+//             else {
+//                 state12_m[k - 4] = s;
+//             }
+//         }
+//         s_m = _mm256_set_epi32((int)state12_m[3], (int)state12_m[2], (int)state12_m[1], (int)state12_m[0], (int)state11_m[3], (int)state11_m[2], (int)state11_m[1], (int)state11_m[0]);
+
+//         s1_32m = mm256_extractf128_si256(s_m, 0);
+//         s2_32m = mm256_extractf128_si256(s_m, 1);
+            
+//         ran_m = _mm256_cvtepi32_pd(s1_32m);
+//         ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//         _mm256_store_pd(ran + i, ran_m);
+//         for (k = 0; k < n - i; ++k) {
+//             if (k < 4) {
+//                 ran[i + k] = ran_m[k];
+//             }
+//         }
+        
+//         ran_m = _mm256_cvtepi32_pd(s2_32m);
+//         ran_m = _mm256_mul_pd(ran_m, rnorm_m);
+//         _mm256_store_pd(ran + i + 4, ran_m);
+//         for (k = 4; k < n - i; ++k) {
+//             ran[i + k] = ran_m[k];
+//         }
+
+//         for (j = k; j < 8; ++j) {
+//             if (j < 4) {
+//                 each_state[7 - (j - k)] = (uint32_t)(state21_m[j]);
+//             }
+//             else {
+//                 each_state[7 - (j - k)] = (uint32_t)(state22_m[j]);
+//             }
+//         }
+//         for (j = 0; j < k; ++j) {
+//             if (j < 4) {
+//                 each_state[k - j - 1] = (uint32_t)(state11_m[j]);
+//             }
+//             else {
+//                 each_state[k - j - 1] = (uint32_t)(state12_m[j]);
+//             }
+//         }
+//     }
 #else
     int i, j, k;
     uint32_t r_state[2][8];

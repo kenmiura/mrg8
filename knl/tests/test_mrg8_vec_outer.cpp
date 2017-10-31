@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     iseed = 13579;
 
     if (argc > 1) {
-        N = atoi(argv[1]) * 1024 * 1024;
+        N = atoi(argv[1]);
     }
     else {
         N = 1 * 1024 * 1024;
@@ -66,6 +66,22 @@ int main(int argc, char **argv)
     mrng = (double)(N) / ave_msec / 1000;
     cout << "MRG8_VEC_OUTER: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
     printf("EVALUATION, MRG8_VEC_OUTER, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
+
+    mrg8 mm(iseed);
+    double *ans = new double[N];
+    mm.rand(ans, N);
+    bool flag = true;
+    for (i = 0; i < N; ++i) {
+        if (ran[i] != ans[i]) {
+            flag = false;
+            break;
+        }
+    }
+    cout << i << ": " << flag << endl;
+
+    mm.print_state();
+    m.print_state();
+    delete[] ans;
 
     delete[] ran;
 

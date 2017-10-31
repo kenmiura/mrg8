@@ -33,8 +33,8 @@ public:
     void mrg8_vec_outer_tp(double * ran, int n);
 
 private:
-    uint64_t A8_IP_MATRIX[64];
-    uint64_t A8_OP_MATRIX[64];
+    int64_t A8_IP_MATRIX[64];
+    int64_t A8_OP_MATRIX[64];
     void mrg8_vec_inner(double *ran, int n, uint32_t *each_state);
     void mrg8_vec_outer(double * ran, int n, uint32_t *each_state);
 };
