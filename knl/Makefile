@@ -32,9 +32,11 @@ mrg_test: $(addprefix $(BIN)/,$(MRG_TEST_TARGET))
 mkl_test: $(addprefix $(BIN)/,$(MKL_TEST_TARGET))
 
 $(BIN)/$(PREF_MKL)%: $(SRC)/$(PREF_MKL)%.o
+	mkdir -p $(BIN)
 	$(ICPC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $@ $^
 
 $(BIN)/$(PREF_MRG)%: $(MRG_OBJ) $(SRC)/$(PREF_MRG)%.o
+	mkdir -p $(BIN)
 	$(ICPC) $(FLAGS) $(MRGLIBS) $(INCLUDE) -o $@ $^
 
 %.o : %.cpp
