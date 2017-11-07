@@ -39,11 +39,11 @@ $(BIN)/$(PREF_MRG)%: $(MRG_OBJ) $(SRC)/$(PREF_MRG)%.o
 	mkdir -p $(BIN)
 	$(ICPC) $(FLAGS) $(MRGLIBS) $(INCLUDE) -o $@ $^
 
-%.o : %.cpp
-	$(ICPC) -c $(FLAGS) $(INCLUDE) -o $@ $<
-
 stream : stream.o
 	$(ICPC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ stream.o
+
+%.o : %.cpp
+	$(ICPC) -c $(FLAGS) $(INCLUDE) -o $@ $<
 
 clean :
 	rm -f *.o $(BIN)/* $(OBJ_TEST)/*.o

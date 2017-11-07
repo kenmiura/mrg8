@@ -66,6 +66,7 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
     __m256i state1_m[2], state2_m[2], s1_m, s2_m, s_m, a_m;
     __m256d ran_m;
     __m256i s_32m;
+    __m256i mone_m = _mm256_set1_epi64x(-1);
     uint64_t s;
     
     for (i = 0; i < 8; ++i) {
@@ -95,8 +96,9 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
         s_m = _mm256_and_si256(state2_m[1 - target], mask_m);
         state2_m[1 - target] = _mm256_srli_epi64(state2_m[1 - target], 31);
         state2_m[1 - target] = _mm256_add_epi64(s_m, state2_m[1 - target]);
+        s_m = _mm256_add_epi64(state2_m[1 - target], mone_m);
 
-        ran_m = _mm256_set_pd((double)state2_m[1 - target][3], (double)state2_m[1 - target][2], (double)state2_m[1 - target][1], (double)state2_m[1 - target][0]);
+        ran_m = _mm256_set_pd((double)s_m[3], (double)s_m[2], (double)s_m[1], (double)s_m[0]);
         ran_m = _mm256_mul_pd(ran_m, rnorm_m);
         _mm256_store_pd(ran + i, ran_m);
     }
@@ -122,7 +124,9 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
     state2_m[1 - target] = _mm256_srli_epi64(state2_m[1 - target], 31);
     state2_m[1 - target] = _mm256_add_epi64(s_m, state2_m[1 - target]);
 
-    ran_m = _mm256_set_pd((double)state2_m[1 - target][3], (double)state2_m[1 - target][2], (double)state2_m[1 - target][1], (double)state2_m[1 - target][0]);
+    s_m = _mm256_add_epi64(state2_m[1 - target], mone_m);
+    ran_m = _mm256_set_pd((double)s_m[3], (double)s_m[2], (double)s_m[1], (double)s_m[0]);
+
     ran_m = _mm256_mul_pd(ran_m, rnorm_m);
     for (k = 0; k < n - i; ++k) {
         ran[i + k] = ran_m[k];
@@ -163,7 +167,7 @@ void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
             s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
             r_state[1 - target][k] = r_state[target][4 + k];
             r_state[1 - target][4 + k] = (s & MASK) + (s >> 31);
-            ran[i + k] = static_cast<double>(r_state[1 - target][4 + k]) * rnorm;
+            ran[i + k] = static_cast<double>(r_state[1 - target][4 + k] - 1) * rnorm;
         }
     }
     for (i = 0; i < k; ++i) {
@@ -206,11 +210,12 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
 #ifdef AVX2
     int i, j;
     int64_t r_state[8];
-    __m256i a_m, s_m, s1_m, s2_m, state_m[2];
+    __m256i a_m[2], s_m, s1_m, s2_m, state_m[2];
     __m256d ran_m;
     double rnorm = 1.0 / static_cast<double>(MASK);
     const __m256i true_m = _mm256_set1_epi32(0xffffffff);
     const __m256i mask_m = _mm256_set1_epi64x(MASK);
+    const __m256i mone_m = _mm256_set1_epi64x(-1);
     const __m256d rnorm_m = _mm256_set1_pd(rnorm);
 
     for (i = 0; i < 8; ++i) {
@@ -224,14 +229,14 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
         s2_m = _mm256_set1_epi64x(0);
 
         for (j = 0; j < 4; ++j) {
-            a_m = _mm256_maskload_epi64(A8_OP_MATRIX + j * 8 + 4, true_m);
+            a_m[0] = _mm256_maskload_epi64(A8_OP_MATRIX + j * 8 + 4, true_m);
+            a_m[1] = _mm256_maskload_epi64(A8_OP_MATRIX + (j + 4) * 8 + 4, true_m);
             s_m = _mm256_set1_epi64x((uint64_t)(state_m[0][j]));
-            s_m = _mm256_mul_epu32(a_m, s_m);
+            s_m = _mm256_mul_epu32(a_m[0], s_m);
             s1_m = _mm256_add_epi64(s1_m, s_m);
 
-            a_m = _mm256_maskload_epi64(A8_OP_MATRIX + (j + 4) * 8 + 4, true_m);
             s_m = _mm256_set1_epi64x((uint64_t)(state_m[1][j]));
-            s_m = _mm256_mul_epu32(a_m, s_m);
+            s_m = _mm256_mul_epu32(a_m[1], s_m);
             s2_m = _mm256_add_epi64(s2_m, s_m);
         }
 
@@ -250,28 +255,29 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
         state_m[1] = _mm256_and_si256(s_m, mask_m);
         s_m = _mm256_srli_epi64(s_m, 31);
         state_m[1] = _mm256_add_epi64(s_m, state_m[1]);
+        s_m = _mm256_add_epi64(state_m[1], mone_m);
         
-        ran_m = _mm256_set_pd((double)state_m[1][3], (double)state_m[1][2], (double)state_m[1][1], (double)state_m[1][0]);
+        ran_m = _mm256_set_pd((double)s_m[3], (double)s_m[2], (double)s_m[1], (double)s_m[0]);
 
         ran_m = _mm256_mul_pd(ran_m, rnorm_m);
         _mm256_store_pd(ran + i, ran_m);
-        // _mm256_store_pd(ran, ran_m);
     }
 
     /* Fraction */
     s1_m = _mm256_set1_epi64x(0);
     s2_m = _mm256_set1_epi64x(0);
     for (j = 0; j < 4; ++j) {
+        a_m[0] = _mm256_maskload_epi64(A8_OP_MATRIX + j * 8 + 4, true_m);
+        a_m[1] = _mm256_maskload_epi64(A8_OP_MATRIX + (j + 4) * 8 + 4, true_m);
+
         r_state[j] = state_m[0][j];
         s_m = _mm256_set1_epi64x((uint64_t)(state_m[0][j]));
-        a_m = _mm256_maskload_epi64(A8_OP_MATRIX + j * 8 + 4, true_m);
-        s_m = _mm256_mul_epu32(a_m, s_m);
+        s_m = _mm256_mul_epu32(a_m[0], s_m);
         s1_m = _mm256_add_epi64(s1_m, s_m);
 
         r_state[4 + j] = state_m[1][j];
         s_m = _mm256_set1_epi64x((uint64_t)(state_m[1][j]));
-        a_m = _mm256_maskload_epi64(A8_OP_MATRIX + (j + 4) * 8 + 4, true_m);
-        s_m = _mm256_mul_epu32(a_m, s_m);
+        s_m = _mm256_mul_epu32(a_m[1], s_m);
         s2_m = _mm256_add_epi64(s2_m, s_m);
     }
 
@@ -290,8 +296,10 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
     state_m[1] = _mm256_and_si256(s_m, mask_m);
     s_m = _mm256_srli_epi64(s_m, 31);
     state_m[1] = _mm256_add_epi64(s_m, state_m[1]);
-        
-    ran_m = _mm256_set_pd((double)state_m[1][3], (double)state_m[1][2], (double)state_m[1][1], (double)state_m[1][0]);
+    s_m = _mm256_add_epi64(state_m[1], mone_m);
+    
+    ran_m = _mm256_set_pd((double)s_m[3], (double)s_m[2], (double)s_m[1], (double)s_m[0]);
+    
     ran_m = _mm256_mul_pd(ran_m, rnorm_m);
     for (j = 0; j < n - i; ++j) {
         ran[i + j] = ran_m[j];
@@ -309,14 +317,6 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
     for (i = 0; i < 4 - j; ++i) {
         each_state[4 + j + i] = r_state[3 - i];
     }
-    
-    
-    // for (i = 0; i < j; ++i) {
-    //     each_state[j - 1 - i] = (uint32_t)(state_m[i]);
-    // }
-    // for (i = j; i < 8; ++i) {
-    //     each_state[j + 7 - i] = (uint32_t)(r_state[i]);
-    // }
 #else
     int i, j, k;
     uint32_t r_state[8];
@@ -344,7 +344,7 @@ void mrg8_vec::mrg8_vec_outer(double * ran, int n, uint32_t *each_state)
             s[k] = (s1[k] & MASK) + (s1[k] >> 31) + (s2[k] & MASK) + (s2[k] >> 31);
             r_state[k] = r_state[4 + k];
             r_state[4 + k] = (s[k] & MASK) + (s[k] >> 31);
-            ran[i + k] = static_cast<double>(r_state[4 + k]) * rnorm;
+            ran[i + k] = static_cast<double>(r_state[4 + k] - 1) * rnorm;
         }
     }
     for (i = 0; i < k; ++i) {
