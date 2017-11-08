@@ -8,6 +8,10 @@
 #include <iostream>
 #include <omp.h>
 
+#include <emmintrin.h>
+#include <immintrin.h>
+#include <zmmintrin.h>
+
 #define ITER 11
 
 using namespace std;
@@ -55,6 +59,7 @@ int main(int argc, char **argv)
     ave_msec /= (ITER - 1);
     bandwidth = (double)N * sizeof(double) / 1024 / 1024 / ave_msec;
     cout << "StreamTest (Write only) : " << bandwidth << " [GB/sec], " << ave_msec << " [milli seconds]" << endl;
+    // printf("EVALUATION, %d, %d, %f, %f\n", omp_get_max_threads(), N, bandwidth, ave_msec);
 
     delete[] a;
     

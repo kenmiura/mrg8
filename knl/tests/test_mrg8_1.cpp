@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 
     mrg8 m(iseed);
     ran = new double[N];
-
+    
     /* Sequential Random Generator - ver1*/
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {

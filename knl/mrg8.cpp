@@ -266,7 +266,7 @@ void mrg8::rand(double * fran, int n, uint32_t *new_state)
 	double rnorm = 1.0/static_cast<double>(MASK);
 	randint(iran1, n, new_state);
 	for (int i = 0; i < n; ++i) {
-	   fran[i] = static_cast<double>(iran1[i]) * rnorm;
+        fran[i] = static_cast<double>(iran1[i] - 1) * rnorm;
 	}
 	delete [] iran1;
 }
@@ -333,7 +333,7 @@ void mrg8::mrg8dnz2(double * ran, int n, uint32_t *new_state)
             }
             s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
             x[k] = (s & MASK) + (s >> 31);
-            ran[j + kmax - 1 - k] = static_cast<double>(x[k]) * rnorm;
+            ran[j + kmax - 1 - k] = static_cast<double>(x[k] - 1) * rnorm;
             // ran[0] = static_cast<double>(x[k]) * rnorm;
         }
         for (k = 0; k < 8; ++k) {
