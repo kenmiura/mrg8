@@ -1,62 +1,46 @@
 CC = nvcc
 
-FLAGS = -O3 -g -arch=sm_37 -lcudart -lcurand
-INCLUDE = -I../common
+FLAGS = -O3 -g -arch=sm_60 -lcudart -lcurand
+INCLUDE = -I../common -I.
 
-OBJ = mrg8.o mrg8_cuda.o
+PREF_MRG = test_mrg
+PREF_CURAND = test_curand
+
+MRG_OBJ = mrg8.o mrg8_cuda.o
+SRC = ./tests
+MRG_TEST = $(wildcard $(SRC)/$(PREF_MRG)*.cu)
+CURAND_TEST = $(wildcard $(SRC)/$(PREF_CURAND)*.cu)
+MRG_TEST_TARGET = $(notdir $(MRG_TEST:.cu=))
+CURAND_TEST_TARGET = $(notdir $(CURAND_TEST:.cu=))
+
 BIN = ./bin
 
 all :
-	make mrg8
-
-mrg8 : $(OBJ)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $@ $(OBJ)
+	make test
 
 test :
-	make test_curand_mrg32k3a
-	make test_curand_mt19937
-	make test_curand_philox4_32_10
-	make test_curand_xorwow
-	make test_curand_mtgp32
-	make test_mrg8_inner
-	make test_mrg8_outer
+	make mrg_test
+	make curand_test
 
-test_curand_mrg32k3a : test_curand_mrg32k3a.o
+mrg_test: $(addprefix $(BIN)/,$(MRG_TEST_TARGET))
+curand_test: $(addprefix $(BIN)/,$(CURAND_TEST_TARGET))
+
+$(BIN)/$(PREF_MRG)%: $(MRG_OBJ) $(SRC)/$(PREF_MRG)%.o
 	mkdir -p $(BIN)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_mrg32k3a.o
+	$(CC) $(FLAGS) $(INCLUDE) -o $@ $^
 
-test_curand_mt19937 : test_curand_mt19937.o
+$(BIN)/$(PREF_CURAND)%: $(SRC)/$(PREF_CURAND)%.o
 	mkdir -p $(BIN)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_mt19937.o
-
-test_curand_philox4_32_10 : test_curand_philox4_32_10.o
-	mkdir -p $(BIN)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_philox4_32_10.o
-
-test_curand_xorwow : test_curand_xorwow.o
-	mkdir -p $(BIN)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_xorwow.o
-
-test_curand_mtgp32 : test_curand_mtgp32.o
-	mkdir -p $(BIN)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ test_curand_mtgp32.o
-
-test_mrg8_inner : $(OBJ) test_mrg8_inner.o
-	mkdir -p $(BIN)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ $(OBJ) test_mrg8_inner.o
-
-test_mrg8_outer : $(OBJ) test_mrg8_outer.o
-	mkdir -p $(BIN)
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $(BIN)/$@ $(OBJ) test_mrg8_outer.o
-
-stream : stream.o
-	$(CC) $(FLAGS) $(MKLLIBS) $(INCLUDE) -o $@ stream.o
+	$(CC) $(FLAGS) $(INCLUDE) -o $@ $^
 
 %.o : %.cu
 	$(CC) -c $(FLAGS) $(INCLUDE) -o $@ $<
 
 %.o : %.cpp
 	$(CC) -c $(FLAGS) $(INCLUDE) -o $@ $<
+
+stream : stream.o
+	$(CC) $(FLAGS)  $(INCLUDE) -o $@ stream.o
 
 clean :
 	rm -f *.o mrg8 stream $(BIN)/*

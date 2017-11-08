@@ -248,6 +248,7 @@ __global__ void rng_inner(double *d_ran, const uint32_t* __restrict__ d_JUMP_MAT
         __syncthreads();
         if (cid == 0) {
             d_new_state[rid] = s;
+            s--;
             d_ran[mat_id + itr + rid] = (double)s * rnorm;
         }
         __syncthreads();
@@ -264,6 +265,7 @@ __global__ void rng_inner(double *d_ran, const uint32_t* __restrict__ d_JUMP_MAT
         __syncthreads();
         if (cid == 0 && itr + rid < max_itr) {
             d_new_state[rid] = s;
+            s--;
             d_ran[mat_id + itr + rid] = (double)s * rnorm;
         }
         __syncthreads();
@@ -288,11 +290,13 @@ __global__ void rng_outer_32(double *d_ran,
     const int rid = threadIdx.x & 31;
     const int lrid = rid >> 3;
     const int lcid = threadIdx.x & 7;
+    const int sid = (rid + 8) & 31;
     
     const uint64_t jump_val = mat_id;
-    const int tb_offset = warp_id << 3;
+    const int tb_offset = warp_id << 5;
     uint64_t s, s1, s2;
-    __shared__ uint32_t d_new_state[32 * 8];
+    // __shared__ uint32_t d_new_state[32 * 8];
+    __shared__ uint32_t d_new_state[32 * 32];
     
     int max_itr = each_itr;
     if (blockIdx.x == gridDim.x - 1 && warp_id == warp_num - 1) {
@@ -331,6 +335,7 @@ __global__ void rng_outer_32(double *d_ran,
     for (itr = 0; itr < max_itr - 32; itr += 32) {
         s1 = 0;
         s2 = 0;
+
 #pragma unroll
         for (int i = 0; i < 4; ++i) {
             s1 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + (i << 5)]) * (uint64_t)(d_new_state[tb_offset + i]);
@@ -338,9 +343,11 @@ __global__ void rng_outer_32(double *d_ran,
         }
         s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
         s = (s & MASK) + (s >> 31);
-        if (rid >= 24) {
-            d_new_state[tb_offset + rid - 24] = s;
-        }
+        // if (rid >= 24) {
+        //     d_new_state[tb_offset + rid - 24] = s;
+        // }
+        d_new_state[tb_offset + sid] = s;
+        s--;
         d_ran[mat_id + itr + rid] = (double)s * rnorm;
     }
     
@@ -357,7 +364,7 @@ __global__ void rng_outer_32(double *d_ran,
         if (itr + rid >= max_itr - 8) {
             d_new_state[tb_offset + (rid % 8)] = s;
         }
-
+        s--;
         if (mat_id + itr + rid < n) {
             d_ran[mat_id + itr + rid] = (double)s * rnorm;
         }
