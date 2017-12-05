@@ -36,6 +36,7 @@ public:
 private:
     uint32_t *JUMP_MATRIX_R, *JUMP_MATRIX_8s_32, *JUMP_MATRIX_8s_64;
     uint32_t *d_JUMP_MATRIX, *d_JUMP_MATRIX_8s_32, *d_JUMP_MATRIX_8s_64;
+    /* uint32_t *d_JUMP_MATRIX, *d_JUMP_MATRIX_8s_64; */
     uint32_t *d_state;
     
 	void mcg64ni();

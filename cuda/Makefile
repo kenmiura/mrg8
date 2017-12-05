@@ -1,6 +1,6 @@
 CC = nvcc
 
-FLAGS = -O3 -g -arch=sm_60 -lcudart -lcurand
+FLAGS = -O3 -g -arch=sm_60 -lcudart -lcurand --ptxas-options=-v
 INCLUDE = -I../common -I.
 
 PREF_MRG = test_mrg

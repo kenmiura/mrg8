@@ -18,8 +18,6 @@
 
 using namespace std;
 
-// #define TNUM (2048 * 64 * 4)
-
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 mrg8_cuda::mrg8_cuda(): mrg8()
 {
@@ -38,7 +36,7 @@ mrg8_cuda::mrg8_cuda(): mrg8()
     cudaMalloc((void **)&d_JUMP_MATRIX_8s_64, sizeof(uint32_t) * 8 * 8 * 8);
 
     cudaMemcpy((int *)d_JUMP_MATRIX, (int *)JUMP_MATRIX_R, sizeof(uint32_t) * 8 * 8 * 247, cudaMemcpyHostToDevice);
-    cudaMemcpy((int *)d_JUMP_MATRIX_8s_32, (int *)d_JUMP_MATRIX_8s_32, sizeof(uint32_t) * 8 * 8 * 4, cudaMemcpyHostToDevice);
+    cudaMemcpy((int *)d_JUMP_MATRIX_8s_32, (int *)JUMP_MATRIX_8s_32, sizeof(uint32_t) * 8 * 8 * 4, cudaMemcpyHostToDevice);
     cudaMemcpy((int *)d_JUMP_MATRIX_8s_64, (int *)JUMP_MATRIX_8s_64, sizeof(uint32_t) * 8 * 8 * 8, cudaMemcpyHostToDevice);
 }
 
@@ -295,9 +293,8 @@ __global__ void rng_outer_32(double *d_ran,
     const uint64_t jump_val = mat_id;
     const int tb_offset = warp_id << 5;
     uint64_t s, s1, s2;
-    // __shared__ uint32_t d_new_state[32 * 8];
     __shared__ uint32_t d_new_state[32 * 32];
-    
+    // __shared__ uint32_t shared_JUMP_MATRIX_8s_32[64 * 4];
     int max_itr = each_itr;
     if (blockIdx.x == gridDim.x - 1 && warp_id == warp_num - 1) {
         max_itr = n - each_itr * (blockIdx.x * warp_num + warp_id);
@@ -307,6 +304,13 @@ __global__ void rng_outer_32(double *d_ran,
         d_new_state[tb_offset + rid] = d_state[rid];
     }
     
+    // if (threadIdx.x < 32) {
+    //     for (int i = 0; i < 8; ++i) {
+    //         shared_JUMP_MATRIX_8s_32[threadIdx.x + i * 32] = d_JUMP_MATRIX_8s_32[threadIdx.x + i * 32];
+    //     }
+    // }
+    // __syncthreads();
+
     /* Compute new_state by 32 threads */
     for (int nb = 0; nb < 32; ++nb) {
         if (jump_val & (1ul << nb)) {
@@ -330,43 +334,60 @@ __global__ void rng_outer_32(double *d_ran,
             }
         }
     }
-    
-    int itr;
-    for (itr = 0; itr < max_itr - 32; itr += 32) {
-        s1 = 0;
-        s2 = 0;
 
+    int itr;
+    uint64_t l1;
+    uint32_t u1, u2;
+    for (itr = 0; itr < max_itr - 32; itr += 32) {
+        l1 = 0;
+        u1 = 0;
+        u2 = 0;
 #pragma unroll
         for (int i = 0; i < 4; ++i) {
-            s1 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + (i << 5)]) * (uint64_t)(d_new_state[tb_offset + i]);
-            s2 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)]) * (uint64_t)(d_new_state[tb_offset + i + 4]);
+            /* Compute full bits */
+            // s1 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + (i << 5)]) * (uint64_t)(d_new_state[tb_offset + i]);
+            // s2 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)]) * (uint64_t)(d_new_state[tb_offset + i + 4]);
+
+            /* Compute lower 32-bit */
+            l1 += (uint64_t)((d_JUMP_MATRIX_8s_32[rid + (i << 5)]) * (d_new_state[tb_offset + i]));
+            l1 += (uint64_t)((d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)]) * (d_new_state[tb_offset + i + 4]));
+            /* Compute upper 32-bit */
+            u1 += __umulhi(d_JUMP_MATRIX_8s_32[rid + (i << 5)], d_new_state[tb_offset + i]);
+            u2 += __umulhi(d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)], d_new_state[tb_offset + i + 4]);
         }
-        s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
+        
+        s = (((uint64_t)u1 + (uint64_t)u2) << 1) + (l1 & MASK) + (l1 >> 31);
+        
         s = (s & MASK) + (s >> 31);
-        // if (rid >= 24) {
-        //     d_new_state[tb_offset + rid - 24] = s;
-        // }
+
         d_new_state[tb_offset + sid] = s;
-        s--;
-        d_ran[mat_id + itr + rid] = (double)s * rnorm;
+        
+        d_ran[mat_id + itr + rid] = (double)(s - 1) * rnorm;
     }
-    
+
     if (itr + rid < max_itr) {
-        s1 = 0;
-        s2 = 0;
+        l1 = 0;
+        u1 = 0;
+        u2 = 0;
 #pragma unroll
         for (int i = 0; i < 4; ++i) {
-            s1 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + 32 * i]) * (uint64_t)(d_new_state[tb_offset + i]);
-            s2 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + 32 * (i + 4)]) * (uint64_t)(d_new_state[tb_offset + i + 4]);
+            // compute lower 32-bit
+            l1 = l1 + (uint64_t)((d_JUMP_MATRIX_8s_32[rid + (i << 5)]) * (d_new_state[tb_offset + i]));
+            l1 = l1 + (uint64_t)((d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)]) * (d_new_state[tb_offset + i + 4]));
+            // compute upper 32-bit
+            u1 = u1 + __umulhi(d_JUMP_MATRIX_8s_32[rid + (i << 5)], d_new_state[tb_offset + i]);
+            u2 = u2 + __umulhi(d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)], d_new_state[tb_offset + i + 4]);
         }
-        s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
+        
+        s = (((uint64_t)u1 + (uint64_t)u2) << 1) + (l1 & MASK) + (l1 >> 31);
+
         s = (s & MASK) + (s >> 31);
         if (itr + rid >= max_itr - 8) {
             d_new_state[tb_offset + (rid % 8)] = s;
         }
-        s--;
+        // d_new_state[tb_offset + sid] = s;
         if (mat_id + itr + rid < n) {
-            d_ran[mat_id + itr + rid] = (double)s * rnorm;
+            d_ran[mat_id + itr + rid] = (double)(s - 1) * rnorm;
         }
     }
     if (blockIdx.x == gridDim.x - 1 && warp_id == warp_num - 1) {
