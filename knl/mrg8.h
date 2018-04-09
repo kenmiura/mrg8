@@ -227,6 +227,7 @@ inline void mrg8::jump_ahead(const uint64_t jump_val, uint32_t *new_state)
                      s2 += uint64_t(JUMP_MATRIX[8 * 8 * nb + i + (q + 4) * 8]) * new_state[q + 4];
                  }
                  s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + ( s2 >> 31);
+                 s = (s & MASK) + (s >> 31);
                  next_state[i] = (s & MASK) + (s >> 31);
              }
              for (int i = 0; i < 8; ++i) {

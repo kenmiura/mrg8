@@ -142,6 +142,10 @@ inline void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
             state2_m = _mm512_srli_epi64(state2_m, 31);
             state2_m = _mm512_add_epi64(s_m, state2_m);
             
+            s_m = _mm512_and_epi64(state2_m, mask_m);
+            state2_m = _mm512_srli_epi64(state2_m, 31);
+            state2_m = _mm512_add_epi64(s_m, state2_m);
+
             s_m = _mm512_add_epi64(state2_m, mone_m);
             s_32m = _mm512_cvtepi64_epi32(s_m);
             
@@ -163,9 +167,14 @@ inline void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
             s_m = _mm512_and_epi64(state1_m, mask_m);
             state1_m = _mm512_srli_epi64(state1_m, 31);
             state1_m = _mm512_add_epi64(s_m, state1_m);
-            s_m = _mm512_add_epi64(state1_m, mone_m);
 
+            s_m = _mm512_and_epi64(state1_m, mask_m);
+            state1_m = _mm512_srli_epi64(state1_m, 31);
+            state1_m = _mm512_add_epi64(s_m, state1_m);
+
+            s_m = _mm512_add_epi64(state1_m, mone_m);
             s_32m = _mm512_cvtepi64_epi32(s_m);
+
             ran_m = _mm512_cvtepi32_pd(s_32m);
             ran_m = _mm512_mul_pd(ran_m, rnorm_m);
             _mm512_store_pd(ran + i, ran_m);
@@ -186,8 +195,12 @@ inline void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
         s_m = _mm512_and_epi64(state2_m, mask_m);
         state2_m = _mm512_srli_epi64(state2_m, 31);
         state2_m = _mm512_add_epi64(s_m, state2_m);
-        s_m = _mm512_add_epi64(state2_m, mone_m);
 
+        s_m = _mm512_and_epi64(state2_m, mask_m);
+        state2_m = _mm512_srli_epi64(state2_m, 31);
+        state2_m = _mm512_add_epi64(s_m, state2_m);
+
+        s_m = _mm512_add_epi64(state2_m, mone_m);
         s_32m = _mm512_cvtepi64_epi32(s_m);
         ran_m = _mm512_cvtepi32_pd(s_32m);
         ran_m = _mm512_mul_pd(ran_m, rnorm_m);
@@ -216,8 +229,12 @@ inline void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
         s_m = _mm512_and_epi64(state1_m, mask_m);
         state1_m = _mm512_srli_epi64(state1_m, 31);
         state1_m = _mm512_add_epi64(s_m, state1_m);
+
+        s_m = _mm512_and_epi64(state1_m, mask_m);
+        state1_m = _mm512_srli_epi64(state1_m, 31);
+        state1_m = _mm512_add_epi64(s_m, state1_m);
+
         s_m = _mm512_add_epi64(state1_m, mone_m);
-        
         s_32m = _mm512_cvtepi64_epi32(s_m);
         ran_m = _mm512_cvtepi32_pd(s_32m);
         ran_m = _mm512_mul_pd(ran_m, rnorm_m);
@@ -251,6 +268,7 @@ inline void mrg8_vec::mrg8_vec_inner(double * ran, int n, uint32_t *each_state)
                 s2 += (uint64_t)(A8_IP_MATRIX[k * 8 + j + 4]) * r_state[target][j + 4];
             }
             s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
+            s = (s & MASK) + (s >> 31);
             r_state[1 - target][k] = (s & MASK) + (s >> 31);
             ran[i + k] = static_cast<double>(r_state[1 - target][k] - 1) * rnorm;
         }
