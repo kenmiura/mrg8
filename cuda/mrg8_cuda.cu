@@ -62,7 +62,7 @@ mrg8_cuda::mrg8_cuda(const uint32_t seed_val): mrg8(seed_val)
     cudaMemcpy((int *)d_JUMP_MATRIX_8s_64, (int *)JUMP_MATRIX_8s_64, sizeof(uint32_t) * 8 * 8 * 8, cudaMemcpyHostToDevice);
 }
 
-// initializing the state with a 32-bit seed
+/* initializing the state with a 32-bit seed */
 void mrg8_cuda::seed_init(const uint32_t seed_val)
 {
 	iseed = seed_val;
@@ -224,6 +224,7 @@ __global__ void rng_inner(double *d_ran, const uint32_t* __restrict__ d_JUMP_MAT
             s = (s & MASK) + (s >> 31);
             s += __shfl_xor(s, 1);
             s = (s & MASK) + (s >> 31);
+            s = (s & MASK) + (s >> 31);
             __syncthreads();
             if (cid == 0) {
                 d_new_state[rid] = s;
@@ -242,6 +243,7 @@ __global__ void rng_inner(double *d_ran, const uint32_t* __restrict__ d_JUMP_MAT
         s = (s & MASK) + (s >> 31);
         s += __shfl_xor(s, 1);
         s = (s & MASK) + (s >> 31);
+        s = (s & MASK) + (s >> 31);
     
         __syncthreads();
         if (cid == 0) {
@@ -258,6 +260,7 @@ __global__ void rng_inner(double *d_ran, const uint32_t* __restrict__ d_JUMP_MAT
         s += __shfl_xor(s, 2);
         s = (s & MASK) + (s >> 31);
         s += __shfl_xor(s, 1);
+        s = (s & MASK) + (s >> 31);
         s = (s & MASK) + (s >> 31);
     
         __syncthreads();
@@ -294,7 +297,6 @@ __global__ void rng_outer_32(double *d_ran,
     const int tb_offset = warp_id << 5;
     uint64_t s, s1, s2;
     __shared__ uint32_t d_new_state[32 * 32];
-    // __shared__ uint32_t shared_JUMP_MATRIX_8s_32[64 * 4];
     int max_itr = each_itr;
     if (blockIdx.x == gridDim.x - 1 && warp_id == warp_num - 1) {
         max_itr = n - each_itr * (blockIdx.x * warp_num + warp_id);
@@ -304,13 +306,6 @@ __global__ void rng_outer_32(double *d_ran,
         d_new_state[tb_offset + rid] = d_state[rid];
     }
     
-    // if (threadIdx.x < 32) {
-    //     for (int i = 0; i < 8; ++i) {
-    //         shared_JUMP_MATRIX_8s_32[threadIdx.x + i * 32] = d_JUMP_MATRIX_8s_32[threadIdx.x + i * 32];
-    //     }
-    // }
-    // __syncthreads();
-
     /* Compute new_state by 32 threads */
     for (int nb = 0; nb < 32; ++nb) {
         if (jump_val & (1ul << nb)) {
@@ -320,12 +315,14 @@ __global__ void rng_outer_32(double *d_ran,
             s1 = (s1 & MASK) + (s1 >> 31);
             s1 += __shfl_xor(s1, 1);
             s1 = (s1 & MASK) + (s1 >> 31);
+            s1 = (s1 & MASK) + (s1 >> 31);
             
             s2 = (uint64_t)(d_JUMP_MATRIX[(nb << 6) + ((lrid + 4) << 3) + lcid]) * (uint64_t)(d_new_state[tb_offset + lcid]);
             s2 += __shfl_xor(s2, 4);
             s2 += __shfl_xor(s2, 2);
             s2 = (s2 & MASK) + (s2 >> 31);
             s2 += __shfl_xor(s2, 1);
+            s2 = (s2 & MASK) + (s2 >> 31);
             s2 = (s2 & MASK) + (s2 >> 31);
 
             if (lcid == 0) {
@@ -344,10 +341,6 @@ __global__ void rng_outer_32(double *d_ran,
         u2 = 0;
 #pragma unroll
         for (int i = 0; i < 4; ++i) {
-            /* Compute full bits */
-            // s1 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + (i << 5)]) * (uint64_t)(d_new_state[tb_offset + i]);
-            // s2 += (uint64_t)(d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)]) * (uint64_t)(d_new_state[tb_offset + i + 4]);
-
             /* Compute lower 32-bit */
             l1 += (uint64_t)((d_JUMP_MATRIX_8s_32[rid + (i << 5)]) * (d_new_state[tb_offset + i]));
             l1 += (uint64_t)((d_JUMP_MATRIX_8s_32[rid + ((i + 4) << 5)]) * (d_new_state[tb_offset + i + 4]));
@@ -358,6 +351,7 @@ __global__ void rng_outer_32(double *d_ran,
         
         s = (((uint64_t)u1 + (uint64_t)u2) << 1) + (l1 & MASK) + (l1 >> 31);
         
+        s = (s & MASK) + (s >> 31);
         s = (s & MASK) + (s >> 31);
 
         d_new_state[tb_offset + sid] = s;
@@ -382,6 +376,8 @@ __global__ void rng_outer_32(double *d_ran,
         s = (((uint64_t)u1 + (uint64_t)u2) << 1) + (l1 & MASK) + (l1 >> 31);
 
         s = (s & MASK) + (s >> 31);
+        s = (s & MASK) + (s >> 31);
+
         if (itr + rid >= max_itr - 8) {
             d_new_state[tb_offset + (rid % 8)] = s;
         }

@@ -94,7 +94,7 @@ uint32_t mrg8::bigDotProd(const uint32_t x[8], const uint32_t y[8]) const
 		s2 += uint64_t(x[4 + q]) * y[4 + q];
 	}
 	s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + ( s2 >> 31);
-	// s = (s & MASK) + (s >> 31);
+	s = (s & MASK) + (s >> 31);
 	return ((s & MASK) + (s >> 31));
 }
 
@@ -236,15 +236,15 @@ void mrg8::randint(uint32_t * iran, int n, uint32_t *new_state)
     for (int k=0;k<n;++k){
         z = bigDotProd(a, new_state);
 
-        new_state[7] = new_state[6];// S[n-8] = S[n-7]
-        new_state[6] = new_state[5];// S[n-7] = S[n-6]
-        new_state[5] = new_state[4];// S[n-6] = S[n-5]
-        new_state[4] = new_state[3];// S[n-5] = S[n-4]
-        new_state[3] = new_state[2];// S[n-4] = S[n-3]
-        new_state[2] = new_state[1];// S[n-3] = S[n-2]
-        new_state[1] = new_state[0];// S[n-2] = S[n-1]
+        new_state[7] = new_state[6]; // S[n-8] = S[n-7]
+        new_state[6] = new_state[5]; // S[n-7] = S[n-6]
+        new_state[5] = new_state[4]; // S[n-6] = S[n-5]
+        new_state[4] = new_state[3]; // S[n-5] = S[n-4]
+        new_state[3] = new_state[2]; // S[n-4] = S[n-3]
+        new_state[2] = new_state[1]; // S[n-3] = S[n-2]
+        new_state[1] = new_state[0]; // S[n-2] = S[n-1]
         new_state[0] = z;
-        iran[k] = new_state[0];// y[n] = S[n]
+        iran[k] = new_state[0]; // y[n] = S[n]
 	}
 }
 
@@ -321,6 +321,7 @@ void mrg8::mrg8dnz2(double * ran, int n, uint32_t *new_state)
                 s2 += uint64_t(a[i + 4]) * x[k + 5 + i];
             }
             s = (s1 & MASK) + (s1 >> 31) + (s2 & MASK) + (s2 >> 31);
+            s = (s & MASK) + (s >> 31);
             x[k] = (s & MASK) + (s >> 31);
             ran[j + kmax - 1 - k] = static_cast<double>(x[k]) * rnorm;
         }
