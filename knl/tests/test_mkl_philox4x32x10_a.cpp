@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
     cout << "Generating " << N << " of 64-bit floating random numbers" << endl;
 
-    ran = new double[N];
+    ran = (double *)_mm_malloc(sizeof(double) * N, 64);
 
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     cout << "MKL_VSL_BRNG_PHILOX4X32X10_ACCURATE: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
     printf("EVALUATION, MKL_VSL_BRNG_PHILOX4X32X10_ACCURATE, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
 
-    delete[] ran;
+    _mm_free(ran);
 
     return 0;
 }

@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     cout << "Generating " << N << " of 64-bit floating random numbers" << endl;
 
     mrg8_vec m(iseed);
-    ran = new double[N];
+    ran = (double *)_mm_malloc(sizeof(double) * N, 64);
 
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
     cout << "MRG8_VEC_INNER_SINGLE: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
     printf("EVALUATION, MRG8_VEC_INNER_SINGLE, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
 
-    delete[] ran;
+    _mm_free(ran);
 
     return 0;
 }

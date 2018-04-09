@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     iseed = 13579;
 
     if (argc > 1) {
-        N = atoi(argv[1]);
+        N = atoi(argv[1]) * 1024 * 1024;
     }
     else {
         N = 1 * 1024 * 1024;
@@ -44,11 +44,11 @@ int main(int argc, char **argv)
     cout << "Generating " << N << " of 64-bit floating random numbers" << endl;
 
     mrg8 mm(iseed);
-    double *ans = new double[N];
+    double *ans = (double *)_mm_malloc(sizeof(double) * N, 64);
     mm.rand(ans, N);
 
     mrg8_vec m(iseed);
-    ran = new double[N];
+    ran = (double *)_mm_malloc(sizeof(double) * N, 64);
 
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
     mm.print_state();
     m.print_state();
 
-    delete[] ran;
+    _mm_free(ran);
 
     return 0;
 }

@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
     cout << "Generating " << N << " of 64-bit floating random numbers" << endl;
 
-    ran = new double[N];
+    ran = (double *)_mm_malloc(sizeof(double) * N, 64);
 
     mt19937 mt(0);
     uniform_real_distribution<double> mt_uni(0, 1);
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     cout << "C++11: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
     printf("EVALUATION, C++11, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
     
-    delete[] ran;
+    _mm_free(ran);
 
     return 0;
 }

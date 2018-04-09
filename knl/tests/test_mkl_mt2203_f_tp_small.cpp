@@ -1,5 +1,5 @@
 /*
- * MRG8 Sequential Random Generator ver.2
+ * MKL RNG -VSL_BRNG_MT2203_Fast- Thread Parallel
  *
  *  Created on: June 29, 2017
  *      Author: Yusuke
@@ -16,13 +16,14 @@
 #include <stdint.h>
 
 #include <rng_test.h>
-#include "../mrg8.h"
+#include <mkl_vsl.h>
+#include "test_mkl.h"
 
 using namespace std;
 
 int main(int argc, char **argv)
 {
-    int i, N;
+    int i, N, it;
     double *ran;
     double start, end, msec, ave_msec, mrng;
     uint32_t iseed;
@@ -34,25 +35,26 @@ int main(int argc, char **argv)
 
     iseed = 13579;
 
-    if (argc > 1) {
-        N = atoi(argv[1]) * 1024 * 1024;
+    if (argc > 2) {
+        N = atoi(argv[1]);
+        it = atoi(argv[2]);
     }
     else {
-        N = 1 * 1024 * 1024;
+        N = 128;
+        it = 1000;
     }
 
-    cout << "Generating " << N << " of 64-bit floating random numbers" << endl;
+    cout << "Generating " << N << " of 64-bit floating random numbers " << it << " times" << endl;
 
-    mrg8 m(iseed);
-    ran = (double *)_mm_malloc(sizeof(double) * N, 64);
-
+    ran = (double *)_mm_malloc(sizeof(double) * N * tnum, 64);
+    
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
-        m.seed_init(iseed);
         start = omp_get_wtime();
-        m.mrg8dnz2(ran, N);
+        mkl_rng_tp_small(ran, N, it, VSL_RNG_METHOD_UNIFORM_STD, VSL_BRNG_MT2203);
         end = omp_get_wtime();
         msec = (end - start) * 1000;
+        // cout << msec << endl;
 #ifdef DEBUG
         if (i == 0) {
             check_rand(ran, N);
@@ -63,9 +65,9 @@ int main(int argc, char **argv)
         }
     }
     ave_msec /= (ITER - 1);
-    mrng = (double)(N) / ave_msec / 1000;
-    cout << "MRG8_2: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
-    printf("EVALUATION, MRG8_2, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
+    mrng = (double)(N * it * tnum) / ave_msec / 1000;
+    cout << "MKL_VSL_BRNG_MT2203_FAST_TP: " << mrng << " [million rng/sec], " << ave_msec << " [milli seconds]" << endl;
+    printf("EVALUATION, MKL_VSL_BRNG_MT2203_FAST_TP, %d, %d, %f, %f\n", tnum, N, mrng, ave_msec);
 
     _mm_free(ran);
 
