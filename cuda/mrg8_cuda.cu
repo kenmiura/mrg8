@@ -279,11 +279,12 @@ __global__ void rng_inner(double *d_ran, const uint32_t* __restrict__ d_JUMP_MAT
     }
 }
 
+template <typename T>
 __global__ void rng_outer_32(double *d_ran,
                              const uint32_t* __restrict__ d_JUMP_MATRIX,
                              const uint32_t* __restrict__ d_JUMP_MATRIX_8s_32,
                              const uint32_t* __restrict__ d_state, uint32_t *d_next_state,
-                             const int n, const uint64_t MASK, const double rnorm, const int each_itr)
+                             const T n, const uint64_t MASK, const double rnorm, const int each_itr)
 {
     const int warp_id = threadIdx.x >> 5;
     const int warp_num = blockDim.x >> 5;
@@ -295,6 +296,9 @@ __global__ void rng_outer_32(double *d_ran,
     
     const uint64_t jump_val = mat_id;
     const int tb_offset = warp_id << 5;
+
+    const int bit_num = sizeof(n) * 8;
+
     uint64_t s, s1, s2;
     __shared__ uint32_t d_new_state[32 * 32];
     int max_itr = each_itr;
@@ -307,7 +311,7 @@ __global__ void rng_outer_32(double *d_ran,
     }
     
     /* Compute new_state by 32 threads */
-    for (int nb = 0; nb < 32; ++nb) {
+    for (int nb = 0; nb < bit_num; ++nb) {
         if (jump_val & (1ul << nb)) {
             s1 = (uint64_t)(d_JUMP_MATRIX[(nb << 6) + (lrid << 3) + lcid]) * (uint64_t)(d_new_state[tb_offset + lcid]);
             s1 += __shfl_xor(s1, 4);
