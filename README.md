@@ -39,7 +39,11 @@ To use this library, the first thing you need to do is to modify the Makefile wi
    - First argument is the number of RNGs to be generated (* 2^20). Above example means "MRG8 optimized for NVIDIA GPU generates 2^24 of RNGs".
 
 ## To use with your own program
-Copy 'mrg8*.cpp' and 'mrg8*.h' from appropriate folder with your target architecture to your codes. To use the library, include file (mrg8.h, mrg8_vec.h or mrg8_cuda.h) in your code, and compile with the program (mrg8*.cpp).
+### CUDA version
+'make build' provides static library of MRG8-CUDA, generating 'libmrg8.a'. Copy 'mrg8.h' and 'mrg8_cuda.h' to your codes. To use the library, add include mrg8_vec.h in your code, and compile with 'libmrg8.a'.
+
+### KNL version
+Copy 'mrg8.h' and 'mrg8_vec.h' to your codes. To use the library, include file (mrg8_vec.h) in your code.
 
 ## Notes
 More detailed document is in ./original/ReadmeMRG8.doc
