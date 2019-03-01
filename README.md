@@ -29,7 +29,7 @@ To use this library, the first thing you need to do is to modify the Makefile wi
 ### CUDA version
  - Compile with Makefile: make test
    - This command generates all test executable file including cuRAND library.
- - Run on KNL processor: './bin/test_mrg8_outer 16'
+ - Run on GPU: './bin/test_mrg8_outer 16'
    - First argument is the number of RNGs to be generated (* 2^20). Above example means "MRG8 optimized for NVIDIA GPU generates 2^24 of RNGs".
 
 ### KNL version
