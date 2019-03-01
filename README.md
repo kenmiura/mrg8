@@ -2,7 +2,7 @@ MRG8
 ======
 
 ## Versions
-2.0 (April, 2018)
+2.1 (March, 2019)
 
 ## Introduction
 This is a pseudorandom number generator based on the 8th order primitive polynomial modulo 2^31-1. This polynomial was provided by Prof. P. L’Ecuyer of Montreal University.
@@ -29,14 +29,14 @@ To use this library, the first thing you need to do is to modify the Makefile wi
 ### CUDA version
  - Compile with Makefile: make test
    - This command generates all test executable file including cuRAND library.
- - Run on KNL processor: './bin/test_mrg8_vec_outer_tp 16'
-   - First argument is the number of RNGs to be generated (* 2^20). Above example means "MRG8 with AVX-512 and full threads generates 2^24 of RNGs".
+ - Run on KNL processor: './bin/test_mrg8_outer 16'
+   - First argument is the number of RNGs to be generated (* 2^20). Above example means "MRG8 optimized for NVIDIA GPU generates 2^24 of RNGs".
 
 ### KNL version
  - Compile with Makefile: make test
    - This command generates all test executable file including Intel MKL
- - Run on KNL processor: './bin/test_mrg8_outer 16'
-   - First argument is the number of RNGs to be generated (* 2^20). Above example means "MRG8 optimized for NVIDIA GPU generates 2^24 of RNGs".
+ - Run on KNL processor: './bin/test_mrg8_vec_outer_tp 16'
+   - First argument is the number of RNGs to be generated (* 2^20). Above example means "MRG8 with AVX-512 and full threads generates 2^24 of RNGs".
 
 ## To use with your own program
 ### CUDA version
