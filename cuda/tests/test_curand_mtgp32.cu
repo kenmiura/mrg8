@@ -2,6 +2,7 @@
  * cuRAND-MTGP32 Random Generator - GPU
  *
  *  Created on: June 29, 2017
+ *  Updated on: March 1, 2019
  *      Author: Yusuke
  */
 
@@ -45,15 +46,15 @@ int main(int argc, char **argv)
     ran = new double[N];
     cudaMalloc((void **)&d_ran, sizeof(double) * N);
 
+	curandGenerator_t prngGPU;
+	curandCreateGenerator(&prngGPU, CURAND_RNG_PSEUDO_MTGP32);
     ave_msec = 0;
     for (i = 0; i < ITER; ++i) {
-        cudaEventRecord(event[0], 0);
-
-        curandGenerator_t prngGPU;
-        curandCreateGenerator(&prngGPU, CURAND_RNG_PSEUDO_MTGP32);
         curandSetPseudoRandomGeneratorSeed(prngGPU, iseed);
+        cudaThreadSynchronize();
+
+        cudaEventRecord(event[0], 0);
         curandGenerateUniformDouble(prngGPU, d_ran, N);
-        
         cudaEventRecord(event[1], 0);
         cudaThreadSynchronize();
         cudaEventElapsedTime(&msec, event[0], event[1]);

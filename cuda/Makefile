@@ -18,6 +18,9 @@ BIN = ./bin
 all :
 	make test
 
+build : $(MRG_OBJ)
+	ar rcs libmrg8.a $(MRG_OBJ)
+
 test :
 	make mrg_test
 	make curand_test
