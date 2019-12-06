@@ -1,1 +1,1 @@
-sbt -v 'testOnly mrg.Mrg8Tester -- -z Basic'
+sbt -v 'testOnly mrg8.Mrg8Tester -- -z Basic'
